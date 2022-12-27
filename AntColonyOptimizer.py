@@ -7,12 +7,30 @@ import warnings
 warnings.filterwarnings("ignore")
 
 
+class Type_of_ant:
+    def __init__(self, nb_ants):
+        self.nb_ants = nb_ants
+        self.path = []
+        self.length = None
+
+    def initialize_pheromones(self, nb_nodes, heuristic_matrix, heuristic_beta):
+        self.pheromone_table = np.ones((nb_nodes, nb_nodes))
+        # Remove the diagonal since there is no pheromone from node i to itself
+        self.pheromone_table[np.eye(nb_nodes) == 1] = 0
+        self.foreign_pheromone_table = np.ones((nb_nodes, nb_nodes))
+        # Remove the diagonal since there is no pheromone from node i to itself
+        self.foreign_pheromone_table[np.eye(nb_nodes) == 1] = 0
+        self.probability_matrix = (self.pheromone_table) * (
+                heuristic_matrix ** heuristic_beta)  # element by element multiplication
+
+
 class AntColonyOptimizer:
-    def __init__(self, ants, evaporation_rate, intensification, alpha=1.0, beta=0.0, beta_evaporation_rate=0,
+    def __init__(self, ants, types, evaporation_rate, intensification, alpha=1.0, beta=0.0, beta_evaporation_rate=0,
                  choose_best=.1):
         """
         Ant colony optimizer.  Traverses a graph and finds either the max or min distance between nodes.
-        :param ants: number of ants to traverse the graph
+        :param ants: number of ants per type
+        :param types: number of types of ants
         :param evaporation_rate: rate at which pheromone evaporates
         :param intensification: constant added to the best path
         :param alpha: weighting of pheromone
@@ -21,18 +39,14 @@ class AntColonyOptimizer:
         :param choose_best: probability to choose the best route
         """
         # Parameters
-        self.ants = ants
+        self.ants = [Type_of_ant(ants) for i in range(types)]
         self.evaporation_rate = evaporation_rate
         self.pheromone_intensification = intensification
-        self.heuristic_alpha = alpha
+        self.heuristic_alpha = alpha  # On n'en aura plus besoin
         self.heuristic_beta = beta
         self.beta_evaporation_rate = beta_evaporation_rate
         self.choose_best = choose_best
-
-        # Internal representations
-        self.pheromone_matrix = None
         self.heuristic_matrix = None
-        self.probability_matrix = None
 
         self.map = None
         self.set_of_available_nodes = None
@@ -78,12 +92,9 @@ class AntColonyOptimizer:
         """
         assert self.map.shape[0] == self.map.shape[1], "Map is not a distance matrix!"
         num_nodes = self.map.shape[0]
-        self.pheromone_matrix = np.ones((num_nodes, num_nodes))
-        # Remove the diagonal since there is no pheromone from node i to itself
-        self.pheromone_matrix[np.eye(num_nodes) == 1] = 0
-        self.heuristic_matrix = 1 / self.map
-        self.probability_matrix = (self.pheromone_matrix ** self.heuristic_alpha) * (
-                self.heuristic_matrix ** self.heuristic_beta)  # element by element multiplcation
+        self.heuristic_matrix = 1/self.map
+        for ant_type in self.ants:
+            ant_type.initialize_pheromones(num_nodes, self.heuristic_matrix, self.heuristic_beta)
         self.set_of_available_nodes = list(range(num_nodes))
 
     def _reinstate_nodes(self):
@@ -97,17 +108,17 @@ class AntColonyOptimizer:
         After evaporation and intensification, the probability matrix needs to be updated.  This function
         does that.
         """
-        self.probability_matrix = (self.pheromone_matrix ** self.heuristic_alpha) * (
-                self.heuristic_matrix ** self.heuristic_beta)
+        for ant_type in self.ants:
+            ant_type.probability_matrix = ant_type.pheromone_table * (self.heuristic_matrix ** self.heuristic_beta)
 
-    def _choose_next_node(self, from_node):
+    def _choose_next_node(self, ant_type, from_node):
         """
         Chooses the next node based on probabilities.  If p < p_choose_best, then the best path is chosen, otherwise
         it is selected from a probability distribution weighted by the pheromone.
         :param from_node: the node the ant is coming from
         :return: index of the node the ant is going to
         """
-        numerator = self.probability_matrix[from_node, self.set_of_available_nodes]
+        numerator = ant_type.probability_matrix[from_node, self.set_of_available_nodes]
         if np.random.random() < self.choose_best:
             next_node = np.argmax(numerator)
         else:
@@ -150,7 +161,8 @@ class AntColonyOptimizer:
         """
         Evaporate some pheromone as the inverse of the evaporation rate.  Also evaporates beta if desired.
         """
-        self.pheromone_matrix *= (1 - self.evaporation_rate)
+        for ant_type in self.ants:
+            ant_type.pheromone_table *= (1 - self.evaporation_rate)
         self.heuristic_beta *= (1 - self.beta_evaporation_rate)
 
     def _intensify(self, best_coords):
@@ -160,7 +172,8 @@ class AntColonyOptimizer:
         """
         i = best_coords[0]
         j = best_coords[1]
-        self.pheromone_matrix[i, j] += self.pheromone_intensification
+        for ant_type in self.ants:
+            ant_type.pheromone_table[i, j] += self.pheromone_intensification
 
     def fit(self, map_matrix, iterations=100, mode='min', early_stopping_count=20, verbose=True):
         """
