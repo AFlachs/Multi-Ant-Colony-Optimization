@@ -24,12 +24,10 @@ class Graph:
     def candidate_list(self, node):
         line_of_interest = self.distance_matrix[node]
         candidates = []
-        for i in range(len(line_of_interest)):
-            if line_of_interest[i] != 0 and line_of_interest != inf:
+        for i, elem in enumerate(line_of_interest):
+            if elem != 0 and elem != inf:
                 candidates.append(i)
         return candidates
-
-
 
 
 
@@ -146,7 +144,7 @@ class AntColonyOptimizer:
         for ant_type in self.ants:
             ant_type.probability_matrix = ant_type.pheromone_table * (self.heuristic_matrix ** self.heuristic_beta)
 
-    def _update_pheromones(self):
+    def _update_pheromones_ant(self):
         """
         After each ant, the pheromone table needs to be updated (before intensification)
         """
@@ -205,7 +203,7 @@ class AntColonyOptimizer:
             type.length = scores[best]
             type.best_path_coords=(coordinates_i[best], coordinates_j[best])
 
-    def _evaporation(self):
+    def _update_pheromones_ietration(self):
         """
         Evaporate some pheromone as the inverse of the evaporation rate.  Also evaporates beta if desired.
         """
@@ -257,7 +255,7 @@ class AntColonyOptimizer:
                     self._reinstate_nodes()
                     type.paths.append(path)
                     path = []
-                    self._update_pheromones()
+                    self._update_pheromones_ant()
 
             self._evaluate(mode)
 
@@ -291,7 +289,7 @@ class AntColonyOptimizer:
                     print("Stopping early due to {} iterations of the same score.".format(early_stopping_count))
                     break
 
-            self._evaporation()
+            self._update_pheromones_ietration()
             self._update_probabilities()
 
         self.fit_time = round(time.time() - start)
