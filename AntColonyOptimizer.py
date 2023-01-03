@@ -129,6 +129,7 @@ class AntColonyOptimizer:
         for ant_type in self.ants:
             ant_type.initialize_pheromones(num_nodes, self.heuristic_matrix, self.heuristic_beta, self.gamma)
         self.set_of_available_nodes = list(range(num_nodes))
+        self.terminal_node = self.set_of_available_nodes[-1]
 
     def _reinstate_nodes(self):
         """
@@ -244,12 +245,14 @@ class AntColonyOptimizer:
                     start_node = current_node
                     while True:
                         path.append(current_node)
-                        self._remove_node(current_node) # TODO: Revoir la condition de fin de la boucle (ici c'est jusqu'à ce qu'il n'y ait plus rien dans la candidate list, vérifier que c'est pareil qu'arriver à la fin
-                        if len(self.set_of_available_nodes) != 0:
+                        self._remove_node(current_node)
+                        if current_node == self.terminal_node:
+                            break
+                        elif len(self.set_of_available_nodes) != 0:
                             current_node_index = self._choose_next_node(type, current_node)
                             current_node = self.set_of_available_nodes[current_node_index]
                         else:
-                            break
+                            current_node = np.random.choice(self.graph.candidate_list(current_node))
 
                     path.append(start_node)  # go back to start
                     self._reinstate_nodes()
