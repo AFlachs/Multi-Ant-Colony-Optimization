@@ -1,7 +1,11 @@
 import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
+import datetime as dt
 #from AntColonyOptimizer import inf
+
+
+
 
 inf = 1000
 graph1 = np.array([
@@ -109,7 +113,11 @@ def display_from_graph(graph,cut=False) -> None:
     """
     
     """
-    labels = {e: graph.edges[e]['weight'] for e in graph.edges}
+    
+    try:
+        labels = {e: graph.edges[e]['weight'] for e in graph.edges}
+    except:
+        labels = {e: 1 for e in graph.edges}
     pos = nx.spring_layout(graph)
     nx.draw(graph, pos, with_labels=True, font_weight='bold')
     nx.draw_networkx_edge_labels(graph, pos, edge_labels=labels)
@@ -117,20 +125,50 @@ def display_from_graph(graph,cut=False) -> None:
     if cut:
         raise(NotImplementedError)
 
+def GraphFactory_barabasi_albert(N : int, M : int,resample=True) -> nx.Graph:
+    """
+    This method generates randomly a barabasi-albert (scale free) graph.
+    NOTE that for i in range(N) : if i<=M, then there is only one new connecting-edge built. 
+    If i>M (until i<N), then there are progressively M new connecting-edges built with previous nodes for this method. 
 
-mat1=np.array([
-    [0,1,1,0,0],
-    [1,0,1,0,0],
-    [1,1,0,0,0],
-    [0,0,0,0,2],
-    [0,0,0,2,0]
-])
+    :param N: number of nodes in the graph that has to be generated.
+    :param M: number of edges to attach from a new node to an existing one.
+    :return: new randomly generated graph
+    """
+    G = nx.barabasi_albert_graph(N,M)
+    if resample:
+        # resample labels to allow 'random' definition of start & end nodes when taking 1st & last in array.
+        map = dict(zip(G.nodes(), sorted(G.nodes(), key=lambda k: np.random.random())))
+        G = nx.relabel_nodes(G, map)
+        # 2 previous  lines from https://stackoverflow.com/questions/59739750/how-can-i-randomly-permute-the-nodes-of-a-graph-with-python-in-networkx
+    return G
 
-#graph1=mat1
+def GraphFactory_erdos_renyi(N : int) -> nx.Graph:
+    #TODO: docstring and auto N's.
+    return nx.erdos_renyi_graph(N,1.001*np.log(N)/N)
 
-display_from_mat(graph1,cut=True)
+def GraphFactory_watts_strogatz(N=12,K=4,P=0.0):
+    #ex usage:
+    return nx.watts_strogatz_graph(N,K,P)
+    #TODO: implement with interesting values.
+    raise(NotImplementedError)
 
-G=mat_to_graph(graph1)
+def GraphFactory_barbell(N : int):
+    return nx.barbell_graph(N//2,N%2)
+
+#G = GraphFactory_barabasi_albert(N=10,M=1,resample=False)
+#G = GraphFactory_barabasi_albert(N=10,M=2,resample=False)
+#G = GraphFactory_barabasi_albert(N=10,M=3,resample=False)
+
+G = GraphFactory_erdos_renyi(40)
+
+#G = GraphFactory_watts_strogatz()
+#G = GraphFactory_watts_strogatz(K=2)
+
+#G = GraphFactory_barbell(9)
+#G = GraphFactory_barbell(10)
+
 m=graph_to_mat(G)
-print("coucou")
-print(m)
+print("# edges = ",len(G.edges))
+print("# nodes = ",len(G.nodes))
+display_from_graph(G)
