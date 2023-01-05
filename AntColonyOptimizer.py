@@ -212,16 +212,16 @@ class AntColonyOptimizer:
                 disjoint = 0
                 for i in range(len(path) - 1):
                     score += self.graph.distance_matrix[path[i], path[i + 1]]
-                    disjoint = disjoint + score * np.sum(type.other_ants[path[i], path[i + 1]])
+                    disjoint = disjoint + self.graph.distance_matrix[path[i], path[i + 1]] * np.sum(type.other_ants[path[i], path[i + 1]])
                 scores[index] = score
                 disjoints[index] = disjoint
             if mode == 'min':
                 min_indices = np.where(disjoints==disjoints.min())[0]
-                #if len(min_indices) > 1:
-                    #scores_min_sum = scores[min_indices]
-                    #best = min_indices[np.argmin(scores_min_sum)]
-                #else:
-                best = np.argmin(disjoints)
+                if len(min_indices) > 1:
+                    scores_min_sum = scores[min_indices]
+                    best = min_indices[np.argmin(scores_min_sum)]
+                else:
+                    best = np.argmin(disjoints)
             elif mode == 'max':
                 best = np.argmax(scores)
             else:
@@ -374,11 +374,11 @@ class AntColonyOptimizer:
                 plt.show()
 
 sum = 0
-for i in range(100):
-    optimizer = AntColonyOptimizer(ants=5, types=2, init_pheromones=0.05, alpha=1, beta=2,
+#for i in range(100):
+optimizer = AntColonyOptimizer(ants=5, types=2, init_pheromones=0.05, alpha=1, beta=2,
                                    beta_evaporation_rate=0, choose_best=0, gamma=0, rho=0.1)
-    best = optimizer.fit(1, 20, verbose=False)
-    print(best)
-    if best == [[0, 2, 3], [0, 1, 3]] or best == [[0, 1, 3], [0, 2, 3]]:
-        sum+=1
+best = optimizer.fit(1, 20, verbose=True)
+print(best)
+if best == [[0, 2, 3], [0, 1, 3]] or best == [[0, 1, 3], [0, 2, 3]]:
+    sum+=1
 print(sum)
