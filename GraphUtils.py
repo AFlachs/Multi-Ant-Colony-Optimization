@@ -173,16 +173,22 @@ def GraphFactory_barbell(N_nodes : int, N_links = 1, type='mat') -> nx.Graph | n
     else:
         exit("ERROR : 'type' parameter in 'GraphFactory_barbell' should be either equal to 'mat' or 'graph'.")
 
-def GraphFactory_from_paper(num=1,bis=False) -> np.ndarray:
+def GraphFactory_from_paper(num=1,bis=False,ret_type='mat') -> np.ndarray:
     """
-    
+    Generates graphes from the scientific paper reproduced.
+
+    :param num: number of the graph, between 1 and 3.
+    :param bis: if True, the value of a bridge in graph 2 is increased.
+    :param ret_type: return type of the function.
+    :return:
     """
+    M=np.inf
     if num==1:
         mat=np.array([
-        [0, 1, 3, inf],
+        [0, 1, 3, M],
         [1, 0, 1, 3],
         [3, 1, 0, 1],
-        [inf, 3, 1, 0]
+        [M, 3, 1, 0]
         ])
     elif num==2:
         X=1 # value of the bridge (3,5)
@@ -190,23 +196,45 @@ def GraphFactory_from_paper(num=1,bis=False) -> np.ndarray:
             X=3
         mat=np.array([
             #0 1 2 3 4 5 6 7 8 9
-            [0,1,1,0,0,0,0,0,0,0],#v0
-            [1,0,1,1,1,0,0,0,0,0],#v1
-            [1,1,0,1,1,0,0,0,0,0],#v2
-            [0,1,1,0,1,X,0,0,0,0],#v3
-            [0,1,1,1,0,0,1,0,0,0],#v4
-            [0,0,0,X,0,0,1,1,1,0],#v5
-            [0,0,0,0,1,1,0,1,1,0],#v6
-            [0,0,0,0,0,1,1,0,1,1],#v7
-            [0,0,0,0,0,1,1,1,0,1],#v8
-            [0,0,0,0,0,0,0,1,1,0] #v9
+            [0,1,1,M,M,M,M,M,M,M],#v0
+            [1,0,1,1,1,M,M,M,M,M],#v1
+            [1,1,0,1,1,M,M,M,M,M],#v2
+            [M,1,1,0,1,X,M,M,M,M],#v3
+            [M,1,1,1,0,M,1,M,M,M],#v4
+            [M,M,M,X,M,0,1,1,1,M],#v5
+            [M,M,M,M,1,1,0,1,1,M],#v6
+            [M,M,M,M,M,1,1,0,1,1],#v7
+            [M,M,M,M,M,1,1,1,0,1],#v8
+            [M,M,M,M,M,M,M,1,1,0] #v9
         ])
     elif num==3:
-        pass
+        mat=np.array([
+            #0 1 2 3 4 5 6 7 8 9 . 1 2 3 4 5
+            [0,1,M,M,M,5,M,M,5,M,M,1,M,M,M,M],#V0
+            [1,0,1,M,M,M,M,M,M,M,M,M,M,M,M,M],#V1
+            [M,1,0,1,M,M,1,M,M,M,M,M,M,M,M,M],#V2
+            [M,M,1,0,2,3,M,M,M,M,M,M,M,M,M,M],#V3
+            [M,M,M,2,0,M,M,M,M,M,M,M,M,M,M,2],#V4
+            [5,M,M,3,M,0,1,M,M,6,M,M,M,M,M,M],#V5
+            [M,M,1,M,M,1,0,1,6,M,M,M,M,M,M,M],#V6
+            [M,M,M,M,M,M,1,0,M,M,M,M,M,M,M,1],#V7
+            [5,M,M,M,M,M,6,M,0,1,M,M,M,3,M,M],#V8
+            [M,M,M,M,M,6,M,M,1,0,1,M,1,M,M,M],#V9
+            [M,M,M,M,M,M,M,M,M,1,0,M,M,M,M,1],#V10
+            [1,M,M,M,M,M,M,M,M,M,M,0,1,M,M,M],#V11
+            [M,M,M,M,M,M,M,M,M,1,M,1,0,1,M,M],#V12
+            [M,M,M,M,M,M,M,M,3,M,M,M,1,0,2,M],#V13
+            [M,M,M,M,M,M,M,M,M,M,M,M,M,2,0,2],#V14
+            [M,M,M,M,2,M,M,1,M,M,1,M,M,M,2,0]#V15
+        ])
+        
     else:
         raise(NotImplementedError)
-    return mat
-
+    
+    if ret_type=='graph':
+        return mat_to_graph(mat)
+    elif ret_type=='mat':
+        return mat
 #G = GraphFactory_barabasi_albert(N=10,M=1,resample=False)
 #G = GraphFactory_barabasi_albert(N=10,M=2,resample=False)
 #G = GraphFactory_barabasi_albert(N=10,M=3,resample=False)
@@ -216,10 +244,13 @@ def GraphFactory_from_paper(num=1,bis=False) -> np.ndarray:
 #G = GraphFactory_watts_strogatz()
 #G = GraphFactory_watts_strogatz(K=2)
 
-G = GraphFactory_barbell(12,N_links=3,type='graph')
+#G = GraphFactory_barbell(N_nodes=12,N_links=3,type='graph')
 #G = GraphFactory_barbell(10)
 
-m=graph_to_mat(G)
+m = GraphFactory_from_paper(3,type='mat')
+print(np.allclose(m,m.T))
+#print(m-m.T)
+G=mat_to_graph(m)
 print("# edges = ",len(G.edges))
 print("# nodes = ",len(G.nodes))
 display_from_graph(G)
