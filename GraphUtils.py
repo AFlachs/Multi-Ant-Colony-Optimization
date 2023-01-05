@@ -8,12 +8,7 @@ import datetime as dt
 
 
 inf = 1000
-graph1 = np.array([
-        [0, 1, 3, inf],
-        [1, 0, 1, 3],
-        [3, 1, 0, 1],
-        [inf, 3, 1, 0]
-        ])
+
 """
     1
   / | \ 
@@ -153,19 +148,75 @@ def GraphFactory_watts_strogatz(N=12,K=4,P=0.0):
     #TODO: implement with interesting values.
     raise(NotImplementedError)
 
-def GraphFactory_barbell(N : int):
-    return nx.barbell_graph(N//2,N%2)
+def GraphFactory_barbell(N_nodes : int, N_links = 1, type='mat') -> nx.Graph | np.ndarray:
+    """
+    Generate a barbell graph with 'N_nodes' divided in 2 cliques (of 'N_nodes//2' nodes), and with 'N_links' between those 2 cliques. 
+
+    :param N_nodes: Total number of vertices.
+    :param N_links: Total number of edges between the 2 cliques.
+    :param type: type of the return graph (either 'np.ndarray' or 'nx.Graph').
+    :return: Barbell graph
+    """
+    G = nx.barbell_graph(N_nodes//2,N_nodes%2)
+    if N_links > 1:
+        n_links_to_implement=N_links-1
+        while n_links_to_implement>0:
+            start, dest = np.random.randint(0,(N_nodes//2)),np.random.randint((N_nodes+1)//2,N_nodes)
+            if (start,dest) not in G.edges:
+                G.add_edge(start,dest,weight=1)
+                n_links_to_implement-=1
+        
+    if type=='mat':
+        return graph_to_mat(G)
+    elif type=='graph':
+        return G
+    else:
+        exit("ERROR : 'type' parameter in 'GraphFactory_barbell' should be either equal to 'mat' or 'graph'.")
+
+def GraphFactory_from_paper(num=1,bis=False) -> np.ndarray:
+    """
+    
+    """
+    if num==1:
+        mat=np.array([
+        [0, 1, 3, inf],
+        [1, 0, 1, 3],
+        [3, 1, 0, 1],
+        [inf, 3, 1, 0]
+        ])
+    elif num==2:
+        X=1 # value of the bridge (3,5)
+        if bis:
+            X=3
+        mat=np.array([
+            #0 1 2 3 4 5 6 7 8 9
+            [0,1,1,0,0,0,0,0,0,0],#v0
+            [1,0,1,1,1,0,0,0,0,0],#v1
+            [1,1,0,1,1,0,0,0,0,0],#v2
+            [0,1,1,0,1,X,0,0,0,0],#v3
+            [0,1,1,1,0,0,1,0,0,0],#v4
+            [0,0,0,X,0,0,1,1,1,0],#v5
+            [0,0,0,0,1,1,0,1,1,0],#v6
+            [0,0,0,0,0,1,1,0,1,1],#v7
+            [0,0,0,0,0,1,1,1,0,1],#v8
+            [0,0,0,0,0,0,0,1,1,0] #v9
+        ])
+    elif num==3:
+        pass
+    else:
+        raise(NotImplementedError)
+    return mat
 
 #G = GraphFactory_barabasi_albert(N=10,M=1,resample=False)
 #G = GraphFactory_barabasi_albert(N=10,M=2,resample=False)
 #G = GraphFactory_barabasi_albert(N=10,M=3,resample=False)
 
-G = GraphFactory_erdos_renyi(40)
+#G = GraphFactory_erdos_renyi(40)
 
 #G = GraphFactory_watts_strogatz()
 #G = GraphFactory_watts_strogatz(K=2)
 
-#G = GraphFactory_barbell(9)
+G = GraphFactory_barbell(12,N_links=3,type='graph')
 #G = GraphFactory_barbell(10)
 
 m=graph_to_mat(G)
