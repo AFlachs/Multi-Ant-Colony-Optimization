@@ -23,10 +23,23 @@ class Graph:
         line_of_interest = self.distance_matrix[node]
         candidates = []
         nb_elems = 0
-        while nb_elems < 5:
-            elem = np.random.choice(line_of_interest)
+        for i, elem in enumerate(line_of_interest):
+            if nb_elems >= 5:
+                break
             if elem != 0 and elem != np.inf:
-                candidates.append(np.where(line_of_interest == elem)[0][0])
+                candidates.append(i)
+                nb_elems += 1
+        return candidates
+
+    def candidate_list_available(self, node, available_nodes):
+        line_of_interest = self.distance_matrix[node]
+        candidates = []
+        nb_elems = 0
+        for i, elem in enumerate(line_of_interest):
+            if nb_elems >= 5:
+                break
+            if elem != 0 and elem != np.inf and (i in available_nodes):
+                candidates.append(i)
                 nb_elems += 1
         return candidates
 
@@ -40,10 +53,11 @@ class Type_of_ant:
         self.best_path = None
         self.best_score = None
         self.best_series = []
-        self.best_path_coords = None
+        self.length = None
+        self.best_length = None
 
     def initialize_pheromones(self, init_pheromones, nb_nodes, nb_types, heuristic_matrix, heuristic_beta, gamma):
-        self.other_ants = np.zeros((nb_nodes, nb_nodes))
+        self.other_ants = np.zeros((nb_nodes, nb_nodes, nb_types-1))
         self.pheromone_table = np.full((nb_nodes, nb_nodes), init_pheromones)
         self.foreign_pheromone_table = np.full((nb_nodes, nb_nodes), init_pheromones * (nb_types - 1))
         self.probability_matrix = (self.pheromone_table) * (
@@ -58,8 +72,7 @@ class AntColonyOptimizer:
         Ant colony optimizer.  Traverses a graph and finds either the max or min distance between nodes.
         :param ants: number of ants per type
         :param types: number of types of ants
-        :param evaporation_rate: rate at which pheromone evaporates
-        :param intensification: constant added to the best path
+        :param init_pheromones: initial value of the pheromones
         :param alpha: weighting of pheromone
         :param beta: weighting of heuristic (1/distance)
         :param beta_evaporation_rate: rate at which beta decays (optional)
@@ -119,12 +132,12 @@ class AntColonyOptimizer:
         Initializes the model by creating the various matrices and generating the list of available nodes
         """
         self.graph = Graph(nb_graph)
-        num_nodes = len(self.graph.distance_matrix)
+        self.num_nodes = len(self.graph.distance_matrix)
         self.heuristic_matrix = 1 / self.graph.distance_matrix
         for ant_type in self.ants:
-            ant_type.initialize_pheromones(self.init_pheromones, num_nodes, len(self.ants), self.heuristic_matrix,
+            ant_type.initialize_pheromones(self.init_pheromones, self.num_nodes, len(self.ants), self.heuristic_matrix,
                                            self.heuristic_beta, self.gamma)
-        self.set_of_available_nodes = list(range(num_nodes))
+        self.set_of_available_nodes = list(range(self.num_nodes))
         self.terminal_node = self.set_of_available_nodes[-1]
 
     def _reinstate_nodes(self):
@@ -132,6 +145,9 @@ class AntColonyOptimizer:
         Resets available nodes to all nodes for the next iteration
         """
         self.set_of_available_nodes = list(range(self.graph.distance_matrix.shape[0]))
+
+    def _remove_node(self, node):
+        self.set_of_available_nodes.remove(node)
 
     def _update_probabilities(self):
         """
@@ -164,8 +180,9 @@ class AntColonyOptimizer:
         :param from_node: the node the ant is coming from
         :return: index of the node the ant is going to
         """
-        neighbours = self.graph.candidate_list(from_node)
+        neighbours = self.graph.candidate_list_available(from_node, self.set_of_available_nodes)
         numerator = ant_type.probability_matrix[from_node, neighbours]
+
         if np.random.random() <= self.exploration_rate:
             next_node_index = np.argmax(numerator)
             next_node = neighbours[next_node_index]
@@ -177,37 +194,33 @@ class AntColonyOptimizer:
         return next_node
 
     def update_other_ants_visits(self, other_ants, from_node, next_node):
-        for type in other_ants:
-            type.other_ants[from_node, next_node] += 1
+        for i, type in enumerate(other_ants):
+            type.other_ants[from_node, next_node, i] = 1
         return next_node
 
     def _evaluate(self, mode):
         """
         Evaluates the solutions of the ants by adding up the distances between nodes.
-        :param paths: solutions from the ants
         :param mode: max or min
         :return: x and y coordinates of the best path as a tuple, the best path, and the best score
         """
         for type in self.ants:
             scores = np.zeros(len(type.paths))
             disjoints = np.zeros(len(type.paths))
-            coordinates_i = []
-            coordinates_j = []
             for index, path in enumerate(type.paths):
                 score = 0
                 disjoint = 0
-                coords_i = []
-                coords_j = []
                 for i in range(len(path) - 1):
-                    coords_i.append(path[i])
-                    coords_j.append(path[i + 1])
                     score += self.graph.distance_matrix[path[i], path[i + 1]]
-                    disjoint = disjoint + score * type.other_ants[path[i], path[i + 1]]
+                    disjoint = disjoint + score * np.sum(type.other_ants[path[i], path[i + 1]])
                 scores[index] = score
                 disjoints[index] = disjoint
-                coordinates_i.append(coords_i)
-                coordinates_j.append(coords_j)
             if mode == 'min':
+                min_indices = np.where(disjoints==disjoints.min())[0]
+                #if len(min_indices) > 1:
+                    #scores_min_sum = scores[min_indices]
+                    #best = min_indices[np.argmin(scores_min_sum)]
+                #else:
                 best = np.argmin(disjoints)
             elif mode == 'max':
                 best = np.argmax(scores)
@@ -215,20 +228,19 @@ class AntColonyOptimizer:
                 raise TypeError("You didn't give a correct mode")
             type.best_path_per_i = type.paths[best]
             type.sum_to_minimze = disjoints[best]
-            type.best_path_coords = (coordinates_i[best], coordinates_j[best])
+            type.length = scores[best]
 
-    def _update_pheromones_ietration(self):
+    def _update_pheromones_iteration(self):
         """
         Evaporate some pheromone as the inverse of the evaporation rate.  Also evaporates beta if desired.
         """
         for ant_type in self.ants:
-            ant_type.pheromone_table *= (1 - self.rho)
-        self.heuristic_beta *= (1 - self.beta_evaporation_rate)
+            ant_type.pheromone_table = (1 - self.rho) * ant_type.pheromone_table + self.rho * np.full(
+                (self.num_nodes, self.num_nodes), self.init_pheromones)
 
     def _intensify(self, type, best_path, best_score):
         """
         Increases the pheromone by some scalar for the best route.
-        :param best_coords: x and y (i and j) coordinates of the best route
         """
         for k in range(len(best_path) - 1):
             i = best_path[k]
@@ -238,7 +250,6 @@ class AntColonyOptimizer:
     def fit(self, nb_graph, iterations=100, mode='min', early_stopping_count=20, verbose=True):
         """
         Fits the ACO to a specific map.  This was designed with the Traveling Salesman problem in mind.
-        :param map_matrix: Distance matrix or some other matrix with similar properties
         :param iterations: number of iterations
         :param mode: whether to get the minimum path or maximum path
         :param early_stopping_count: how many iterations of the same score to make the algorithm stop early
@@ -253,18 +264,22 @@ class AntColonyOptimizer:
             start_iter = time.time()
             path = []
             for type in self.ants:
-                type.other_ants = np.zeros(self.graph.distance_matrix.shape)
+                type.other_ants = np.zeros(
+                    (self.graph.distance_matrix.shape[0], self.graph.distance_matrix.shape[1], (len(self.ants) - 1)))
             for ant in range(self.nb_ants):
                 for type in self.ants:
                     other_types = [t for t in self.ants if t != type]
                     current_node = 0
+                    self._remove_node(current_node)
                     while True:
                         path.append(current_node)
                         if current_node == self.terminal_node:
                             break
-                        elif len(self.graph.candidate_list(current_node)) != 0:
+                        elif len(self.graph.candidate_list_available(current_node, self.set_of_available_nodes)) != 0:
                             current_node_index = self._choose_next_node(type, current_node)
                             current_node = self.update_other_ants_visits(other_types, current_node, current_node_index)
+
+                            self._remove_node(current_node)
                         else:
                             current_node_index = np.random.choice(self.graph.candidate_list(current_node))
                             current_node = self.update_other_ants_visits(other_types, current_node, current_node_index)
@@ -272,7 +287,7 @@ class AntColonyOptimizer:
                     self._reinstate_nodes()
                     type.paths.append(path)
                     path = []
-                    self._update_pheromones_ant()
+                    self._update_pheromones_iteration()
 
             self._evaluate(mode)
 
@@ -280,11 +295,13 @@ class AntColonyOptimizer:
                 if i == 0:
                     type.best_score = type.sum_to_minimze
                     type.best_path = type.best_path_per_i
+                    type.best_length = type.length
                 else:
                     if mode == 'min':
                         if type.sum_to_minimze < type.best_score:
                             type.best_score = type.sum_to_minimze
                             type.best_path = type.best_path_per_i
+                            type.best_length = type.length
                     elif mode == 'max':
                         if type.sum_to_minimze > type.best_score:
                             type.best_score = type.sum_to_minimze
@@ -296,7 +313,7 @@ class AntColonyOptimizer:
                     num_equal = 0
 
                 type.best_series.append(type.sum_to_minimze)
-                self._intensify(type, type.best_path, type.best_score)
+                self._intensify(type, type.best_path, type.best_length)
 
                 if verbose: print("Best score at iteration {}: {}; Best path {}; overall: {} ({}s)"
                                   "".format(i, round(type.sum_to_minimze, 2), type.best_path, round(type.best_score, 2),
@@ -307,7 +324,6 @@ class AntColonyOptimizer:
                     print("Stopping early due to {} iterations of the same score.".format(early_stopping_count))
                     break
 
-            self._update_pheromones_ietration()
             self.update_foreign_pheromones()
             self._update_probabilities()
 
@@ -357,9 +373,12 @@ class AntColonyOptimizer:
                 plt.title("Ant Colony Optimization Results (best: {})".format(np.round(self.best, 2)))
                 plt.show()
 
-
+sum = 0
 for i in range(100):
     optimizer = AntColonyOptimizer(ants=5, types=2, init_pheromones=0.05, alpha=1, beta=2,
-                                   beta_evaporation_rate=0, choose_best=0, gamma=0.0, rho=0.1)
+                                   beta_evaporation_rate=0, choose_best=0, gamma=0, rho=0.1)
     best = optimizer.fit(1, 20, verbose=False)
     print(best)
+    if best == [[0, 2, 3], [0, 1, 3]] or best == [[0, 1, 3], [0, 2, 3]]:
+        sum+=1
+print(sum)
