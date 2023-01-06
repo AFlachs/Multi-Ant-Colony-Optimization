@@ -26,6 +26,20 @@ graph2_no_weight = np.array([
             [M,M,M,M,M,M,M,1,1,0] #v9
         ])
 
+graph2_weight = np.array([
+            #0 1 2 3 4 5 6 7 8 9
+            [0,1,1,M,M,M,M,M,M,M],#v0
+            [1,0,1,1,1,M,M,M,M,M],#v1
+            [1,1,0,1,1,M,M,M,M,M],#v2
+            [M,1,1,0,1,3,M,M,M,M],#v3
+            [M,1,1,1,0,M,1,M,M,M],#v4
+            [M,M,M,3,M,0,1,1,1,M],#v5
+            [M,M,M,M,1,1,0,1,1,M],#v6
+            [M,M,M,M,M,1,1,0,1,1],#v7
+            [M,M,M,M,M,1,1,1,0,1],#v8
+            [M,M,M,M,M,M,M,1,1,0] #v9
+        ])
+
 
 class Graph:
     def __init__(self, nb_graph):
@@ -33,6 +47,8 @@ class Graph:
             self.distance_matrix = graph1
         elif nb_graph == 2:
             self.distance_matrix = graph2_no_weight
+        elif nb_graph == 3:
+            self.distance_matrix = graph2_weight
         else:
             raise TypeError("You didn't give a right number of graph.")
 
