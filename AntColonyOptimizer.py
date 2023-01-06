@@ -40,6 +40,25 @@ graph2_weight = np.array([
             [M,M,M,M,M,M,M,1,1,0] #v9
         ])
 
+graph3=np.array([
+            #0 1 2 3 4 5 6 7 8 9 . 1 2 3 4 5
+            [0,1,M,M,M,5,M,M,5,M,M,1,M,M,M,M],#V0
+            [1,0,1,M,M,M,M,M,M,M,M,M,M,M,M,M],#V1
+            [M,1,0,1,M,M,1,M,M,M,M,M,M,M,M,M],#V2
+            [M,M,1,0,2,3,M,M,M,M,M,M,M,M,M,M],#V3
+            [M,M,M,2,0,M,M,M,M,M,M,M,M,M,M,2],#V4
+            [5,M,M,3,M,0,1,M,M,6,M,M,M,M,M,M],#V5
+            [M,M,1,M,M,1,0,1,6,M,M,M,M,M,M,M],#V6
+            [M,M,M,M,M,M,1,0,M,M,M,M,M,M,M,1],#V7
+            [5,M,M,M,M,M,6,M,0,1,M,M,M,3,M,M],#V8
+            [M,M,M,M,M,6,M,M,1,0,1,M,1,M,M,M],#V9
+            [M,M,M,M,M,M,M,M,M,1,0,M,M,M,M,1],#V10
+            [1,M,M,M,M,M,M,M,M,M,M,0,1,M,M,M],#V11
+            [M,M,M,M,M,M,M,M,M,1,M,1,0,1,M,M],#V12
+            [M,M,M,M,M,M,M,M,3,M,M,M,1,0,2,M],#V13
+            [M,M,M,M,M,M,M,M,M,M,M,M,M,2,0,2],#V14
+            [M,M,M,M,2,M,M,1,M,M,1,M,M,M,2,0]#V15
+        ])
 
 class Graph:
     def __init__(self, nb_graph):
@@ -49,6 +68,8 @@ class Graph:
             self.distance_matrix = graph2_no_weight
         elif nb_graph == 3:
             self.distance_matrix = graph2_weight
+        elif nb_graph == 4:
+            self.distance_matrix = graph3
         else:
             raise TypeError("You didn't give a right number of graph.")
 
@@ -264,13 +285,16 @@ class AntColonyOptimizer:
             type.sum_to_minimze = disjoints[best]
             type.length = scores[best]
 
-    def _update_pheromones_iteration(self, ant_type):
+    def _update_pheromones_iteration(self, ant_type, path):
         """
         Evaporate some pheromone as the inverse of the evaporation rate.  Also evaporates beta if desired.
         """
-        #for ant_type in self.ants:
-        ant_type.pheromone_table = (1 - self.rho) * ant_type.pheromone_table + self.rho * np.full(
-            (self.num_nodes, self.num_nodes), self.init_pheromones)
+        for k in range(len(path) - 1):
+            i = path[k]
+            j = path[k + 1]
+            ant_type.pheromone_table[i, j] = (1 - self.rho) * ant_type.pheromone_table[i, j] + self.rho * self.init_pheromones
+            ant_type.pheromone_table[j, i] = (1 - self.rho) * ant_type.pheromone_table[
+                j, i] + self.rho * self.init_pheromones
 
     def _intensify(self, type, best_path, best_length):
         """
@@ -280,6 +304,7 @@ class AntColonyOptimizer:
             i = best_path[k]
             j = best_path[k + 1]
             type.pheromone_table[i, j] = (1 - self.rho) * type.pheromone_table[i, j] + 1 / best_length
+            type.pheromone_table[j, i] = (1 - self.rho) * type.pheromone_table[j, i] + 1 / best_length
 
     def fit(self, nb_graph, iterations=100, mode='min', early_stopping_count=20, verbose=True):
         """
@@ -320,8 +345,9 @@ class AntColonyOptimizer:
 
                     self._reinstate_nodes()
                     type.paths.append(path)
+                    self._update_pheromones_iteration(type, path)
                     path = []
-                    self._update_pheromones_iteration(type)
+
 
             self._evaluate(mode)
 
