@@ -114,9 +114,7 @@ class Type_of_ant:
         self.other_ants = np.zeros((nb_nodes, nb_nodes, nb_types - 1))
         self.pheromone_table = np.full((nb_nodes, nb_nodes), init_pheromones)
         self.foreign_pheromone_table = np.full((nb_nodes, nb_nodes), init_pheromones * (nb_types - 1))
-        self.probability_matrix = (self.pheromone_table) * (
-                heuristic_matrix ** heuristic_beta) * ((
-                                                               1 / self.foreign_pheromone_table) ** gamma)  # element by element multiplication
+        self.probability_matrix = (self.pheromone_table) * (heuristic_matrix ** heuristic_beta) * ((1 / self.foreign_pheromone_table) ** gamma)  # element by element multiplication
 
 
 class AntColonyOptimizer:
@@ -293,18 +291,21 @@ class AntColonyOptimizer:
             i = path[k]
             j = path[k + 1]
             ant_type.pheromone_table[i, j] = (1 - self.rho) * ant_type.pheromone_table[i, j] + self.rho * self.init_pheromones
-            ant_type.pheromone_table[j, i] = (1 - self.rho) * ant_type.pheromone_table[
-                j, i] + self.rho * self.init_pheromones
+            ant_type.pheromone_table[j, i] = (1 - self.rho) * ant_type.pheromone_table[j, i] + self.rho * self.init_pheromones
 
     def _intensify(self, type, best_path, best_length):
         """
         Increases the pheromone by some scalar for the best route.
         """
+        delta_tau_s=np.zeros(type.pheromone_table.shape)
         for k in range(len(best_path) - 1):
             i = best_path[k]
             j = best_path[k + 1]
-            type.pheromone_table[i, j] = (1 - self.rho) * type.pheromone_table[i, j] + 1 / best_length
-            type.pheromone_table[j, i] = (1 - self.rho) * type.pheromone_table[j, i] + 1 / best_length
+            #type.pheromone_table[i, j] = (1 - self.rho) * type.pheromone_table[i, j] + 1 / best_length
+            #type.pheromone_table[j, i] = (1 - self.rho) * type.pheromone_table[j, i] + 1 / best_length
+            delta_tau_s[i,j]= 1/best_length
+            delta_tau_s[j,i]= 1/best_length
+        type.pheromone_table = (1 - self.rho) * type.pheromone_table + delta_tau_s
 
     def fit(self, nb_graph, iterations=100, mode='min', early_stopping_count=20, verbose=True):
         """
@@ -371,8 +372,9 @@ class AntColonyOptimizer:
                     num_equal += 1
                 else:
                     num_equal = 0
-
                 type.best_series.append(type.sum_to_minimze)
+
+            for type in self.ants:
                 self._intensify(type, type.best_path, type.best_length)
 
                 if verbose: print("Best score at iteration {}: {}; Best path {}; overall: {} ({}s)"
@@ -436,7 +438,7 @@ class AntColonyOptimizer:
 sum = 0
 for i in range(100):
     optimizer = AntColonyOptimizer(ants=5, types=2, init_pheromones=0.05, beta=2, choose_best=0,
-                                   gamma=0, rho=0.1)
+                                   gamma=1, rho=0.1)
     best = optimizer.fit(1, 20, verbose=False)
     print(best)
     if best == [[0, 2, 3], [0, 1, 3]] or best == [[0, 1, 3], [0, 2, 3]]:
