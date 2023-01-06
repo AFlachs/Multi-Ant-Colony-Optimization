@@ -6,16 +6,49 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
+M=np.inf
 graph1 = np.array([[0, 1, 3, np.inf],
                    [1, 0, 1, 3],
                    [3, 1, 0, 1],
                    [np.inf, 3, 1, 0]])
+
+graph2_no_weight = np.array([
+            #0 1 2 3 4 5 6 7 8 9
+            [0,1,1,M,M,M,M,M,M,M],#v0
+            [1,0,1,1,1,M,M,M,M,M],#v1
+            [1,1,0,1,1,M,M,M,M,M],#v2
+            [M,1,1,0,1,1,M,M,M,M],#v3
+            [M,1,1,1,0,M,1,M,M,M],#v4
+            [M,M,M,1,M,0,1,1,1,M],#v5
+            [M,M,M,M,1,1,0,1,1,M],#v6
+            [M,M,M,M,M,1,1,0,1,1],#v7
+            [M,M,M,M,M,1,1,1,0,1],#v8
+            [M,M,M,M,M,M,M,1,1,0] #v9
+        ])
+
+graph2_weight = np.array([
+            #0 1 2 3 4 5 6 7 8 9
+            [0,1,1,M,M,M,M,M,M,M],#v0
+            [1,0,1,1,1,M,M,M,M,M],#v1
+            [1,1,0,1,1,M,M,M,M,M],#v2
+            [M,1,1,0,1,3,M,M,M,M],#v3
+            [M,1,1,1,0,M,1,M,M,M],#v4
+            [M,M,M,3,M,0,1,1,1,M],#v5
+            [M,M,M,M,1,1,0,1,1,M],#v6
+            [M,M,M,M,M,1,1,0,1,1],#v7
+            [M,M,M,M,M,1,1,1,0,1],#v8
+            [M,M,M,M,M,M,M,1,1,0] #v9
+        ])
 
 
 class Graph:
     def __init__(self, nb_graph):
         if nb_graph == 1:
             self.distance_matrix = graph1
+        elif nb_graph == 2:
+            self.distance_matrix = graph2_no_weight
+        elif nb_graph == 3:
+            self.distance_matrix = graph2_weight
         else:
             raise TypeError("You didn't give a right number of graph.")
 
@@ -66,8 +99,8 @@ class Type_of_ant:
 
 
 class AntColonyOptimizer:
-    def __init__(self, ants, types, init_pheromones, alpha=1.0, beta=0.0, beta_evaporation_rate=0,
-                 choose_best=.1, gamma=0.0, rho=0.0):
+    def __init__(self, ants, types, init_pheromones, beta=0.0,
+                 choose_best=.1, gamma=0.0, rho=0.0, method_score=0):
         """
         Ant colony optimizer.  Traverses a graph and finds either the max or min distance between nodes.
         :param ants: number of ants per type
@@ -79,12 +112,12 @@ class AntColonyOptimizer:
         :param choose_best: probability to choose the best route
         :param gamma: weighting of foreign pheromones
         :param rho: pheromone decay
+        :param method_score: Method used to calculate the sum to minimize. 0 : equation 7 and 1 : the other one
         """
         # Parameters
         self.nb_ants = ants
         self.ants = [Type_of_ant(ants) for i in range(types)]
         self.init_pheromones = init_pheromones
-        self.heuristic_alpha = alpha  # On n'en aura plus besoin
         self.heuristic_beta = beta
         self.exploration_rate = choose_best
         self.heuristic_matrix = None
@@ -97,6 +130,7 @@ class AntColonyOptimizer:
         self.best = []
         self.fitted = False
         self.fit_time = None
+        self.method_score = method_score
 
         # Plotting values
         self.stopped_early = False
@@ -108,7 +142,6 @@ class AntColonyOptimizer:
         string += "\n--------------------"
         string += "\nNumber of ants:\t\t\t\t{}".format(self.ants)
         string += "\nEvaporation rate:\t\t\t{}".format(self.rho)
-        string += "\nAlpha Heuristic:\t\t\t{}".format(self.heuristic_alpha)
         string += "\nBeta Heuristic:\t\t\t\t{}".format(self.heuristic_beta)
         string += "\nBeta Evaporation Rate:\t\t{}".format(self.beta_evaporation_rate)
         string += "\nExploration rate:\t\t{}".format(self.exploration_rate)
@@ -202,12 +235,18 @@ class AntColonyOptimizer:
             for index, path in enumerate(type.paths):
                 score = 0
                 disjoint = 0
+                nb_shared_edges = 0
                 for i in range(len(path) - 1):
                     score += self.graph.distance_matrix[path[i], path[i + 1]]
-                    # print(self.graph.distance_matrix[path[i], path[i + 1]])
-                    disjoint = disjoint + self.graph.distance_matrix[path[i], path[i + 1]] * np.sum(
-                        type.other_ants[path[i], path[i + 1]])
-                    # print(disjoint)
+                    if np.sum(type.other_ants[path[i], path[i + 1]]) != 0:
+                        if self.method_score == 0:
+                            disjoint = disjoint + self.graph.distance_matrix[path[i], path[i + 1]] * np.sum(
+                            type.other_ants[path[i], path[i + 1]])
+                        else:
+                            disjoint += np.sum(type.other_ants[path[i], path[i + 1]])
+                            nb_shared_edges += 1
+                if self.method_score == 1:
+                    disjoint = disjoint/nb_shared_edges
                 scores[index] = score
                 disjoints[index] = disjoint
             if mode == 'min':
@@ -321,6 +360,7 @@ class AntColonyOptimizer:
 
             self.update_foreign_pheromones()
             self._update_probabilities()
+            print("Finish iteration "+str(i))
 
         self.fit_time = round(time.time() - start)
         self.fitted = True
@@ -359,8 +399,8 @@ class AntColonyOptimizer:
                 ax.set_xlabel("Iteration")
                 ax.set_ylabel("Performance")
                 ax.text(.8, .6,
-                        'Ant type: {}\nEvap Rate: {}\nIntensify: {}\nAlpha: {}\nBeta: {}\nBeta Evap: {}\nChoose Best: {}\n\nFit Time: {}m{}'.format(
-                            i, self.evaporation_rate, self.pheromone_intensification, self.heuristic_alpha,
+                        'Ant type: {}\nEvap Rate: {}\nIntensify: {}\nBeta: {}\nBeta Evap: {}\nChoose Best: {}\n\nFit Time: {}m{}'.format(
+                            i, self.evaporation_rate, self.pheromone_intensification,
                             self.heuristic_beta, self.beta_evaporation_rate, self.exploration_rate, self.fit_time // 60,
                             ["\nStopped Early!" if self.stopped_early else ""][0]),
                         bbox={'facecolor': 'gray', 'alpha': 0.8, 'pad': 10}, transform=ax.transAxes)
@@ -369,12 +409,8 @@ class AntColonyOptimizer:
                 plt.show()
 
 
-sum = 0
-for i in range(100):
-    optimizer = AntColonyOptimizer(ants=5, types=2, init_pheromones=0.05, alpha=1, beta=2,
-                                   beta_evaporation_rate=0, choose_best=0, gamma=0, rho=0.1)
-    best = optimizer.fit(1, 20, verbose=False)
-    print(best)
-    if best == [[0, 2, 3], [0, 1, 3]] or best == [[0, 1, 3], [0, 2, 3]]:
-        sum += 1
-print(sum)
+
+optimizer = AntColonyOptimizer(ants=12, types=2, init_pheromones=0.05, beta=2, choose_best=1,
+                                               gamma=2, rho=0.1)
+best = optimizer.fit(2, 1000, verbose=False)
+print(best)
