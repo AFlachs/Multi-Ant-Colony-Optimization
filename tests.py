@@ -70,6 +70,27 @@ def test_paper_graph_2_no_weight_method1():
                 if seq_in_list(path, bridge1):
                     nb_ants_bridge1 += 1
         percentage = nb_ants_bridge1 / nb_type
+        writer_csv.writerow([nb_type, percentage, 1])
+
+def test_paper_graph_2_weight_method0():
+    """
+    Fonction pour les tests à reproduire sur le graph2 avec les deux bridges qui ont des weights diff. On utilise la deuxième
+    méthode de calcul pour la fonction objective.
+    """
+    f = open("Files/graph2_paper_weight.csv", "a")
+    writer_csv = writer(f)
+    nb_types = [*range(2, 7)]
+    bridge1 = [3, 5]
+    for nb_type in nb_types:
+        nb_ants_bridge1 = 0
+        for i in range(100):
+            optimizer = AntColonyOptimizer(ants=12, types=nb_type, init_pheromones=0.05, beta=2, choose_best=1,
+                                           gamma=2, rho=0.1, method_score=1)
+            best = optimizer.fit(2, 1000, verbose=False)
+            for path in best:
+                if seq_in_list(path, bridge1):
+                    nb_ants_bridge1 += 1
+        percentage = nb_ants_bridge1 / nb_type
         writer_csv.writerow([nb_type, percentage, 0])
 
 def test_barbell_modified():
