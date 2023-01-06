@@ -386,7 +386,6 @@ class AntColonyOptimizer:
 
             self.update_foreign_pheromones()
             self._update_probabilities()
-            print("Finish iteration "+str(i))
 
         self.fit_time = round(time.time() - start)
         self.fitted = True
@@ -434,9 +433,12 @@ class AntColonyOptimizer:
                 plt.title("Ant Colony Optimization Results (best: {})".format(np.round(self.best, 2)))
                 plt.show()
 
-
-
-optimizer = AntColonyOptimizer(ants=12, types=2, init_pheromones=0.05, beta=2, choose_best=1,
-                                               gamma=2, rho=0.1)
-best = optimizer.fit(2, 1000, verbose=False)
-print(best)
+sum = 0
+for i in range(100):
+    optimizer = AntColonyOptimizer(ants=5, types=2, init_pheromones=0.05, beta=2, choose_best=0,
+                                   gamma=0, rho=0.1)
+    best = optimizer.fit(1, 20, verbose=False)
+    print(best)
+    if best == [[0, 2, 3], [0, 1, 3]] or best == [[0, 1, 3], [0, 2, 3]]:
+        sum += 1
+print(sum)

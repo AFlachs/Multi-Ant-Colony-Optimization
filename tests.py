@@ -51,6 +51,7 @@ def test_paper_graph_2_no_weight_method0():
         percentage = nb_ants_bridge1 / nb_type
         writer_csv.writerow([nb_type, percentage, 0])
 
+
 def test_paper_graph_2_no_weight_method1():
     """
     Fonction pour les tests à reproduire sur le graph2 avec les deux bridges = 1. On utilise la deuxième
@@ -71,6 +72,7 @@ def test_paper_graph_2_no_weight_method1():
                     nb_ants_bridge1 += 1
         percentage = nb_ants_bridge1 / nb_type
         writer_csv.writerow([nb_type, percentage, 1])
+
 
 def test_paper_graph_2_weight_method0():
     """
@@ -93,6 +95,7 @@ def test_paper_graph_2_weight_method0():
         percentage = nb_ants_bridge1 / nb_type
         writer_csv.writerow([nb_type, percentage, 0])
 
+
 def test_paper_graph_2_weight_method1():
     """
     Fonction pour les tests à reproduire sur le graph2 avec les deux bridges qui ont des weights diff. On utilise la deuxième
@@ -113,6 +116,33 @@ def test_paper_graph_2_weight_method1():
                     nb_ants_bridge1 += 1
         percentage = nb_ants_bridge1 / nb_type
         writer_csv.writerow([nb_type, percentage, 1])
+
+
+def test_paper_graph3():
+    f = open("Files/graph3_paper.csv", "a")
+    writer_csv = writer(f)
+    nb_types = [2, 3, 4]
+    q_0_list = np.arange(0, 1, 0.1)
+    for nb_type in nb_types:
+        for q_0 in q_0_list:
+            nb_disjoint = 0
+            for i in range(100):
+                optimizer = AntColonyOptimizer(ants=12, types=nb_type, init_pheromones=0.05, beta=2, choose_best=q_0,
+                                               gamma=2, rho=0.1)
+                best = optimizer.fit(4, 1000, verbose=False)
+                if check_disjoints(best):
+                    nb_disjoint+=1
+
+
+def check_disjoints(best):
+    for j in range(len(best) - 1):
+        for k in range(len(best[j]) - 1):
+            seq = [best[j][k], best[j][k + 1]]
+            # Il faut chercher si la séquence se trouve dans un autre path de best
+            for path in best[j + 1:]:
+                if seq_in_list(path, seq):
+                    return False
+    return True
 
 
 def test_barbell_modified():
