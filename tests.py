@@ -325,8 +325,8 @@ def check_disjoints(best):
 def test_barbell_modified(numtest,adv=True,verbose=True, use_rust_macs=True):
     #CONSTANTS (from optimizer)
     ANT_NUMBER = 10
-    q_0, g = 0, 0#1
-    t_max, cl_len = 100, 5
+    q_0, g = 0.2, 2#1
+    t_max, cl_len = 400, 5
     #VARIABLES (for tests)
     filename="barbell_00{:d}".format(numtest)
     if filename=="barbell_000":
@@ -345,11 +345,11 @@ def test_barbell_modified(numtest,adv=True,verbose=True, use_rust_macs=True):
         N_LINKS = 4
         N_TESTS = 50
     if filename=="barbell_004":
-        LIST_NODES = [10,15,20,25,30,35,40,45,50]#TODO: should be [10, 50, 100, 500]
-        LIST_N_ANT_TYPES = [2,3,4] #TODO: AT LEAST 2 ANT TYPES (1 causes bug)
+        LIST_NODES = [20, 40, 80, 150]#TODO: should be [10, 50, 100, 500]
+        LIST_N_ANT_TYPES = [2, 3, 4] #TODO: AT LEAST 2 ANT TYPES (1 causes bug)
         N_LINKS = 3
         N_TESTS = 100
-        t_max=200
+        t_max=1500
     
     N_PAIRS = 1 #should be 5, but would be identical in case of Barbell...
     N_GRAPHS = 1 #should be 3, but would be identical in case of Barbell...
@@ -375,7 +375,7 @@ def test_barbell_modified(numtest,adv=True,verbose=True, use_rust_macs=True):
                 sum_successes = 0
                 part_successes = 0
                 for _ in range(N_TESTS):
-                    if adv and _%10==0:print("iter",_)
+                    if adv and _%20==0:print(f"graph {ing}, iter {_} with {ntypes} types")
                     if use_rust_macs:
                         results = rust_macs.optimize_macs(graph, ANT_NUMBER, ntypes, 0.05, 2, q_0, g, 0.1, 0, graph.shape[0]-1, t_max, cl_len, disjoint_val_method=0)
                         best = [i[0] for i in results]
@@ -422,10 +422,10 @@ def test_scale_free(numtest=1,adv=True,verbose=False,use_rust_macs=True):
     """
     #CONSTANTS (from optimizer)
     ANT_NUMBER = 10
-    q_0, g = 0, 0#1
+    q_0, g = 0, 2#1
     t_max, cl_len = 100, 5
     #VARIABLES (for tests)
-    filename="barabasi_albert_00{:d}".format(numtest)
+    filename="barabasi_albert_00{:d}_bis".format(numtest)
     if filename=="barabasi_albert_000":
         LIST_NODES = [10,20]
         LIST_N_ANT_TYPES = [2,3] #AT LEAST 2 ANT TYPES (1 causes bug)
@@ -433,13 +433,13 @@ def test_scale_free(numtest=1,adv=True,verbose=False,use_rust_macs=True):
         N_PAIRS = 2 
         N_GRAPHS = 2 
         t_max=20
-    if filename=="barabasi_albert_001":
-        LIST_NODES = [10,15,20,25,30,35,40,45,50] 
+    if filename=="barabasi_albert_001_bis":
+        LIST_NODES = [10,20,40, 80, 150]
         LIST_N_ANT_TYPES = [2,3,4] #AT LEAST 2 ANT TYPES (1 causes bug)
         N_TESTS = 100
-        N_PAIRS = 5 
+        N_PAIRS = 3
         N_GRAPHS = 3 
-        t_max=200
+        t_max=600
     
 
     f = open("Files/%s.csv"%(filename),'a',newline='')
@@ -465,7 +465,7 @@ def test_scale_free(numtest=1,adv=True,verbose=False,use_rust_macs=True):
 
                 print(graph)
                 for ntypes in LIST_N_ANT_TYPES:
-                    if adv:print("  Tests with ",ntypes," ant types (",nnodes," nodes)")
+                    if adv:print(f" Graph {ing} tests with ",ntypes," ant types (",nnodes," nodes)")
                     #nb_type=nlinks #the number of types of ants is the number of link for barbel
 #                    mincut=N_LINKS#same for the value of the minimum cut
                     sum_successes = 0
@@ -473,6 +473,7 @@ def test_scale_free(numtest=1,adv=True,verbose=False,use_rust_macs=True):
                     for _ in range(N_TESTS):
                         if adv and _%10==0:print("iter",_)
                         if use_rust_macs:
+                            if nnodes >= 40: t_max = 1200
                             results = rust_macs.optimize_macs(graph, ANT_NUMBER, ntypes, 0.05, 2, q_0, g, 0.1, src, dst, t_max, cl_len, disjoint_val_method=0)
                             best = [i[0] for i in results]
                             
@@ -548,8 +549,8 @@ if __name__ == '__main__':
     #test_barbell_modified(3,adv=True,verbose=False)#TODO
     # test_barbell_modified(4,adv=True,verbose=False)#TODO
 
-    #test_scale_free(0,adv=True,verbose=False)#ok
-    #test_scale_free(1,adv=True,verbose=False)#TODO
+    # test_scale_free(0,adv=True,verbose=False)#ok
+    test_scale_free(1,adv=True,verbose=False)#TODO
     
     # print("Testing graph 1")
     # test_paper_graph1(True)
@@ -564,5 +565,5 @@ if __name__ == '__main__':
     # print("Testing graph 3 q0 varies")
     # test_paper_graph3_q0_varying(True)
     # print("Testing graph 3 q0 fixed")
-    test_paper_graph3(True)
+    # test_paper_graph3(True)
     # test_barbell_modified()
