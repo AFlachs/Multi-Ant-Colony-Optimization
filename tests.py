@@ -362,23 +362,24 @@ def test_barbell_modified(numtest,adv=True,verbose=True, use_rust_macs=True):
                 for _ in range(N_TESTS):
                     if adv and _%10==0:print("iter",_)
                     if use_rust_macs:
-                        results = optimize_macs(graph, ANT_NUMBER, ntypes, 0.05, 2, q_0, g, 0.1, 0, graph.shape[0]-1, t_max, cl_len, disjoint_val_method=0)
+                        results = rust_macs.optimize_macs(graph, ANT_NUMBER, ntypes, 0.05, 2, q_0, g, 0.1, 0, graph.shape[0]-1, t_max, cl_len, disjoint_val_method=0)
                         best = [i[0] for i in results]
                         
                     else:
                         raise TypeError("Use rust_macs instead...")
                         optimizer = AntColonyOptimizer(ants=ANT_NUMBER, types=ntypes, init_pheromones=0.05, beta=2, choose_best=q_0, gamma=g, rho=0.1)
                         best = optimizer.fit(0,graph_mat=graph,iterations=100, verbose=False,verbis=False)
-                    n_good_path=0
+                    i=0
 
                     for j in range(len(best)):
-                        if best[j] in best_paths:
+                        if best[j] in disj_best_paths:
                             i+=1
-                    if i==len(best):
+#                    if i==len(best):
+                    if (ntypes>=mincut and i>=mincut)or(ntypes<mincut and i==ntypes):
                         if verbose:print("    :test",_,": succeeded !\n     sol=",best)
                         sum_successes+=1
                     else:
-                        if n_good_path>0:part_successes+=1 #if at least one disjoint path is found
+                        if i>0:part_successes+=1 #if at least one disjoint path is found
                         if verbose:print("    :test",_,": failed !\n     sol=",best)
                 #CSV    #nodes,#links,n°graph,#types,%
                 tac=time.perf_counter()
@@ -391,6 +392,8 @@ def test_barbell_modified(numtest,adv=True,verbose=True, use_rust_macs=True):
     f.close()
     tac = time.perf_counter()
     print(f"Barbell took {tac - tic:0.1f} seconds to run.")
+
+
 
 
 def test_small_world():
@@ -457,7 +460,7 @@ def test_scale_free(numtest=1,adv=True,verbose=False,use_rust_macs=True):
                     for _ in range(N_TESTS):
                         if adv and _%10==0:print("iter",_)
                         if use_rust_macs:
-                            results = optimize_macs(graph, ANT_NUMBER, ntypes, 0.05, 2, q_0, g, 0.1, src, dst, t_max, cl_len, disjoint_val_method=0)
+                            results = rust_macs.optimize_macs(graph, ANT_NUMBER, ntypes, 0.05, 2, q_0, g, 0.1, src, dst, t_max, cl_len, disjoint_val_method=0)
                             best = [i[0] for i in results]
                             
                         else:
