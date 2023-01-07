@@ -411,11 +411,18 @@ def test_paper(num_graph):
 
 
 if __name__ == '__main__':
+    print("Testing graph 1")
     test_paper_graph1(True)
+    print("Testing graph 2 no weight 0")
     test_paper_graph_2_no_weight_method0(True)
+    print("Testing graph 2 no weight 1")
     test_paper_graph_2_no_weight_method1(True)
+    print("Testing graph 2 weight 0")
     test_paper_graph_2_weight_method0(True)
+    print("Testing graph 2 weight 1")
     test_paper_graph_2_weight_method1(True)
+    print("Testing graph 3 q0 varies")
     test_paper_graph3_q0_varying(True)
+    print("Testing graph 3 q0 fixed")
     test_paper_graph3(True)
     # test_barbell_modified()
