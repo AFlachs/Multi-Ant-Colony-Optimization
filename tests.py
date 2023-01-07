@@ -155,6 +155,7 @@ def test_paper_graph3():
     gamma = 2
     dest = 15
     t_max = 1000 # Tah Jul
+    disjoint_val_method = 0
     f = open("Files/graph3_paper.csv", "a")
     writer_csv = writer(f)
     nb_types = [2, 3, 4]
@@ -163,7 +164,7 @@ def test_paper_graph3():
         for q_0 in q_0_list:
             min_length_per_run = []
             for i in range(100):
-                result = rust_macs.optimize_macs(graph3, n_ants, nb_type, init_pheromones, beta, q_0, gamma, rho, source, dest, t_max, cl_len)
+                result = rust_macs.optimize_macs(graph3, n_ants, nb_type, init_pheromones, beta, q_0, gamma, rho, source, dest, t_max, cl_len, disjoint_val_method)
                 result_paths = [i[0] for i in result]
                 result_lengths = [i[2] for i in result]
                 if check_disjoints(result_paths):
@@ -172,6 +173,30 @@ def test_paper_graph3():
             perc_opt = min_length_per_run.count(optimal_sol)/len(min_length_per_run) #On compte combien de runs disjoints contiennent la meilleure solution
             coef_var = cv(min_length_per_run)
             writer_csv.writerow([nb_type,q_0,optimal_sol,len(min_length_per_run),perc_opt,coef_var])
+
+def test_paper_graph3_q0_varying():
+    n_ants = 12
+    gamma = 2
+    dest = 15
+    t_max = 1000  # Tah Jul
+    disjoint_val_method = 0
+    f = open("Files/graph3_paper_q0_varying.csv", "a")
+    writer_csv = writer(f)
+    nb_types = [2, 3, 4]
+    for nb_type in nb_types:
+        min_length_per_run = []
+        for i in range(100):
+            result = rust_macs.optimize_macs(graph3, n_ants, nb_type, init_pheromones, beta, 0.0, gamma, rho, source,
+                                             dest, t_max, cl_len, disjoint_val_method, 0.1, 0.9)
+            result_paths = [i[0] for i in result]
+            result_lengths = [i[2] for i in result]
+            if check_disjoints(result_paths):
+                min_length_per_run.append(min(result_lengths))
+        optimal_sol = min(min_length_per_run)
+        perc_opt = min_length_per_run.count(optimal_sol) / len(
+            min_length_per_run)  # On compte combien de runs disjoints contiennent la meilleure solution
+        coef_var = cv(min_length_per_run)
+        writer_csv.writerow([nb_type, "variation_of_q_0", optimal_sol, len(min_length_per_run), perc_opt, coef_var])
 
 
 def check_disjoints(best):
