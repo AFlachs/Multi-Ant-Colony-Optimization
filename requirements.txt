@@ -1,4 +1,4 @@
-networkx,
-matplotlib,
-numpy,
+networkx
+matplotlib
+numpy
 rust_macs
