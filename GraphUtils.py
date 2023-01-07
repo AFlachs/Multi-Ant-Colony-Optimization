@@ -2,6 +2,7 @@ import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
 import datetime as dt
+from networkx.algorithms.connectivity import minimum_st_edge_cut
 
 ### CONVERSION functions (from/to networkx.Graph/numpy.array)
 def mat_to_graph(matrix : np.ndarray) -> nx.Graph:
@@ -11,14 +12,15 @@ def mat_to_graph(matrix : np.ndarray) -> nx.Graph:
     :param matrix: adjacency matrix representing the graph.
     :return: Graph object.
     """
-    matrix[(matrix==np.inf)]=0
-    return nx.from_numpy_array(matrix)
+    tmp=np.copy(matrix)
+    tmp[(tmp==np.inf)]=0
+    return nx.from_numpy_array(tmp)
 
-def graph_to_mat(graph : nx.Graph,with_inf_val=False) -> np.ndarray:
+def graph_to_mat(graph : nx.Graph,with_inf_val=True) -> np.ndarray:
     """
     
     """
-    mat = nx.to_numpy_array(graph,dtype=int)
+    mat = nx.to_numpy_array(graph)
     if with_inf_val:
         for i in range(len(mat)):
             for j in range(i+1,len(mat)):
@@ -38,6 +40,19 @@ def get_min_cut_from_mat(matrix : np.ndarray) -> tuple:
     G = mat_to_graph(matrix)
     return nx.minimum_cut(G,start,end,capacity='weight')
 
+def get_edges_from_min_cut(matrix : np.ndarray) -> np.ndarray:
+    G=mat_to_graph(matrix)
+    cut_val=get_min_disjoint_path(matrix)
+    res=np.zeros((cut_val,2))
+    cut = minimum_st_edge_cut(G,0,len(matrix)-1)
+    for i,e in enumerate(cut):
+        res[i,0]=e[0]#edge, start side
+        res[i,1]=e[1]#edge, arrival side
+    return res
+
+def get_all_disjoint_paths(matrix : np.ndarray) -> list :
+    G=mat_to_graph(matrix)
+    return list(nx.edge_disjoint_paths(G,0,len(matrix)-1))
 
 def get_min_disjoint_path(matrix : np.ndarray,ret_subsets=False) -> int:
     """
@@ -56,7 +71,7 @@ def get_min_disjoint_path(matrix : np.ndarray,ret_subsets=False) -> int:
     if ret_subsets:
         return C
     else:
-        return C[0] #first element is the value of the cut (here, in a graph with all edge labelled with 0) 
+        return int(C[0]) #first element is the value of the cut (here, in a graph with all edge labelled with 0) 
 
 def exist_shortest_path(matrix : np.ndarray) -> bool:
     """
@@ -157,15 +172,23 @@ def GraphFactory_barbell(N_nodes : int, N_links = 1, ret_type='mat') -> nx.Graph
     :param type: type of the return graph (either 'np.ndarray' or 'nx.Graph').
     :return: Barbell graph
     """
+    #if N_nodes%2==1: raise TypeError("Please specify an odd number of nodes for Barbell factory.")
     G = nx.barbell_graph(N_nodes//2,N_nodes%2)
+    links=np.ones((N_links,2))*(-1) # allow to have bridge starting/arriving from/to different bridges. 
+    links[0,:]=[N_nodes//2-1,N_nodes//2]
     if N_links > 1:
         n_links_to_implement=N_links-1
         while n_links_to_implement>0:
-            start, dest = np.random.randint(0,(N_nodes//2)),np.random.randint((N_nodes+1)//2,N_nodes)
-            if (start,dest) not in G.edges:
+            #exclude source and sink nodes
+            start, dest = np.random.randint(1,(N_nodes//2)),np.random.randint((N_nodes+1)//2,N_nodes-1)
+            if (start,dest) not in G.edges and start not in links[:,0] and dest not in links[:,1]:
                 G.add_edge(start,dest,weight=1)
+                links[N_links-n_links_to_implement,:]=[start,dest]
                 n_links_to_implement-=1
-        
+    
+    if -1 in links:
+        raise TypeError("Something happened in barbell factory...")
+    
     if ret_type=='mat':
         return graph_to_mat(G)
     elif ret_type=='graph':

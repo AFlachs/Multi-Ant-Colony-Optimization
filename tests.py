@@ -1,9 +1,8 @@
 from csv import writer
 from AntColonyOptimizer import AntColonyOptimizer
 import numpy as np
-
-LIST_NODES = [10, 50, 100, 500]
-
+import GraphUtils as gu
+import time
 
 def seq_in_list(list, seq):
     for i in range(len(list) - len(seq) + 1):
@@ -145,9 +144,59 @@ def check_disjoints(best):
     return True
 
 
-def test_barbell_modified():
-    pass
 
+
+def test_barbell_modified(verbose=True):
+    #VARIABLES (for tests)
+    LIST_NODES = [10,15,20,25,30]#TODO: should be [10, 50, 100, 500]
+    N_LINKS = 3
+    LIST_N_ANT_TYPES = [2,3,4] #TODO: AT LEAST 2 ANT TYPES (1 causes bug)
+    N_PAIRS = 1 #TODO: should be 5, but would be identical in case of Barbell...
+    N_GRAPHS = 1 #TODO: should be 3, but would be identical in case of Barbell...
+
+    #CONSTANTS (from optimizer)
+    N_TESTS = 50
+    ANT_NUMBER=10
+    q_0, g = 0, 1
+
+    filename="barbell_001"
+    f = open("Files/%s.csv"%(filename),'a',newline='')
+    ww = writer(f)
+    ww.writerow(["# nodes","# links","no graph","# ant types","% success/{:d}tests".format(N_TESTS),"time(s)"])
+    tic=time.perf_counter()
+    itic=tic
+    for nnodes in LIST_NODES:
+        for ing in range(N_GRAPHS):
+            if verbose:print("Initialization of Barbell graph n° ",ing," with ",nnodes," nodes and " ,N_LINKS," bridges...")
+            graph = gu.GraphFactory_barbell(nnodes,N_LINKS,ret_type='mat')
+            best_paths = gu.get_all_disjoint_paths(graph)
+            for ntypes in LIST_N_ANT_TYPES:
+                if verbose:print("  Tests with ",ntypes," ant types")
+                #nb_type=nlinks #the number of types of ants is the number of link for barbel
+                mincut=N_LINKS#same for the value of the minimum cut
+                sum_successes = 0
+                for _ in range(N_TESTS):
+                    if verbose:print("    :test",_,": began...")
+                    optimizer = AntColonyOptimizer(ants=ANT_NUMBER, types=ntypes, init_pheromones=0.05, beta=2, choose_best=q_0,
+                                               gamma=g, rho=0.1)
+                    best = optimizer.fit(0,graph_mat=graph,iterations=100, verbose=False,verbis=False)
+                    i=0
+                    for j in range(len(best)):
+                        if best[j] in best_paths:
+                            i+=1
+                    if i==len(best):
+                        if verbose:print("    :test",_,": succeeded !\n     sol=",best)
+                        sum_successes+=1
+                    else:
+                        if verbose:print("    :test",_,": failed !\n     sol=",best)
+                #CSV    #nodes,#links,n°graph,#types,%
+                tac=time.perf_counter()
+                ww.writerow([nnodes,N_LINKS,ing,ntypes,sum_successes*(100/N_TESTS),round(tac-itic,2)])
+                itic=tac
+                
+    f.close()
+    tac=time.perf_counter()
+    print(f"Barbell took {tac - tic:0.1f} seconds to run.")
 
 def test_small_world():
     """
@@ -198,4 +247,5 @@ def test_paper(num_graph):
     np.savetxt("test_paper_graph%d.csv",res,fmt="%d",delimiter=",")
 
 if __name__ == '__main__':
-    test_paper_graph1()
+    #test_paper_graph1()
+    test_barbell_modified()

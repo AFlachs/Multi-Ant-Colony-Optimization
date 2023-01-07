@@ -61,7 +61,7 @@ graph3=np.array([
         ])
 
 class Graph:
-    def __init__(self, nb_graph):
+    def __init__(self, nb_graph,matrix=None):
         if nb_graph == 1:
             self.distance_matrix = graph1
         elif nb_graph == 2:
@@ -70,6 +70,8 @@ class Graph:
             self.distance_matrix = graph2_weight
         elif nb_graph == 4:
             self.distance_matrix = graph3
+        elif nb_graph == 0:
+            self.distance_matrix = matrix
         else:
             raise TypeError("You didn't give a right number of graph.")
 
@@ -115,7 +117,6 @@ class Type_of_ant:
         self.pheromone_table = np.full((nb_nodes, nb_nodes), init_pheromones)
         self.foreign_pheromone_table = np.full((nb_nodes, nb_nodes), init_pheromones * (nb_types - 1))
         self.probability_matrix = (self.pheromone_table) * (heuristic_matrix ** heuristic_beta) * ((1 / self.foreign_pheromone_table) ** gamma)  # element by element multiplication
-
 
 class AntColonyOptimizer:
     def __init__(self, ants, types, init_pheromones, beta=0.0,
@@ -177,11 +178,11 @@ class AntColonyOptimizer:
             string += "\n\nThis optimizer has NOT been fitted."
         return string
 
-    def _initialize(self, nb_graph):
+    def _initialize(self, nb_graph,matrix=None):
         """
         Initializes the model by creating the various matrices and generating the list of available nodes
         """
-        self.graph = Graph(nb_graph)
+        self.graph = Graph(nb_graph,matrix=matrix)
         self.num_nodes = len(self.graph.distance_matrix)
         self.heuristic_matrix = 1 / self.graph.distance_matrix
         for ant_type in self.ants:
@@ -307,7 +308,7 @@ class AntColonyOptimizer:
             delta_tau_s[j,i]= 1/best_length
         type.pheromone_table = (1 - self.rho) * type.pheromone_table + delta_tau_s
 
-    def fit(self, nb_graph, iterations=100, mode='min', early_stopping_count=20, verbose=True):
+    def fit(self, nb_graph, graph_mat=None, iterations=100, mode='min', early_stopping_count=20, verbose=True,verbis=True):
         """
         Fits the ACO to a specific map.  This was designed with the Traveling Salesman problem in mind.
         :param iterations: number of iterations
@@ -317,7 +318,7 @@ class AntColonyOptimizer:
         """
         if verbose: print("Beginning ACO Optimization with {} iterations...".format(iterations))
         start = time.time()
-        self._initialize(nb_graph)
+        self._initialize(nb_graph,matrix=graph_mat)
         num_equal = 0
 
         for i in range(iterations):
@@ -383,7 +384,7 @@ class AntColonyOptimizer:
 
                 if type.sum_to_minimze == type.best_score and num_equal == early_stopping_count:
                     self.stopped_early = True
-                    print("Stopping early due to {} iterations of the same score.".format(early_stopping_count))
+                    if verbis:print("Stopping early due to {} iterations of the same score.".format(early_stopping_count))
                     break
 
             self.update_foreign_pheromones()
@@ -435,12 +436,13 @@ class AntColonyOptimizer:
                 plt.title("Ant Colony Optimization Results (best: {})".format(np.round(self.best, 2)))
                 plt.show()
 
-sum = 0
-for i in range(100):
-    optimizer = AntColonyOptimizer(ants=5, types=2, init_pheromones=0.05, beta=2, choose_best=0,
-                                   gamma=1, rho=0.1)
-    best = optimizer.fit(1, 20, verbose=False)
-    print(best)
-    if best == [[0, 2, 3], [0, 1, 3]] or best == [[0, 1, 3], [0, 2, 3]]:
-        sum += 1
-print(sum)
+if __name__ == '__main__':
+    sum = 0
+    for i in range(100):
+        optimizer = AntColonyOptimizer(ants=5, types=2, init_pheromones=0.05, beta=2, choose_best=0,
+                                    gamma=1, rho=0.1)
+        best = optimizer.fit(1, 20, verbose=False)
+        print(best)
+        if best == [[0, 2, 3], [0, 1, 3]] or best == [[0, 1, 3], [0, 2, 3]]:
+            sum += 1
+    print(sum)

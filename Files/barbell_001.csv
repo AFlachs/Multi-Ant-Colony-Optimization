@@ -1,0 +1,13 @@
+# nodes,# links,n° graph,# ant types,% success/5tests
+10,3,0,2,20.0
+# nodes,# links,no graph,# ant types,% success/5tests
+10,3,0,2,20.0
+10,3,0,3,20.0
+10,3,0,4,40.0
+# nodes,# links,no graph,# ant types,% success/5tests,time(s)
+10,3,0,2,60.0,17.624585399986245
+10,3,0,3,80.0,26.896914800046943
+# nodes,# links,no graph,# ant types,% success/50tests,time(s)
+10,3,0,2,48.0,181.03
+10,3,0,3,62.0,309.52
+10,3,0,4,38.0,652.48
