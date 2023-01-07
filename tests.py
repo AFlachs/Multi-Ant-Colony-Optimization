@@ -5,7 +5,7 @@ import GraphUtils as gu
 import time
 import rust_macs
 
-M=np.inf
+M = 0
 init_pheromones = 0.05
 beta = 2
 rho = 0.1
@@ -15,6 +15,39 @@ cl_len = 5
 # Function to calculate the coefficient of variance for graph 3
 cv = lambda x: np.std(x, ddof=1) / np.mean(x) * 100
 
+
+graph1 = np.array([[0, 1, 3, M],
+                   [1, 0, 1, 3],
+                   [3, 1, 0, 1],
+                   [M, 3, 1, 0]])
+
+graph2_no_weight = np.array([
+    #0 1 2 3 4 5 6 7 8 9
+    [0,1,1,M,M,M,M,M,M,M],#v0
+    [1,0,1,1,1,M,M,M,M,M],#v1
+    [1,1,0,1,1,M,M,M,M,M],#v2
+    [M,1,1,0,1,1,M,M,M,M],#v3
+    [M,1,1,1,0,M,1,M,M,M],#v4
+    [M,M,M,1,M,0,1,1,1,M],#v5
+    [M,M,M,M,1,1,0,1,1,M],#v6
+    [M,M,M,M,M,1,1,0,1,1],#v7
+    [M,M,M,M,M,1,1,1,0,1],#v8
+    [M,M,M,M,M,M,M,1,1,0] #v9
+])
+
+graph2_weight = np.array([
+    #0 1 2 3 4 5 6 7 8 9
+    [0,1,1,M,M,M,M,M,M,M],#v0
+    [1,0,1,1,1,M,M,M,M,M],#v1
+    [1,1,0,1,1,M,M,M,M,M],#v2
+    [M,1,1,0,1,3,M,M,M,M],#v3
+    [M,1,1,1,0,M,1,M,M,M],#v4
+    [M,M,M,3,M,0,1,1,1,M],#v5
+    [M,M,M,M,1,1,0,1,1,M],#v6
+    [M,M,M,M,M,1,1,0,1,1],#v7
+    [M,M,M,M,M,1,1,1,0,1],#v8
+    [M,M,M,M,M,M,M,1,1,0] #v9
+])
 
 graph3 = np.array([
             #0 1 2 3 4 5 6 7 8 9 . 1 2 3 4 5
@@ -44,7 +77,7 @@ def seq_in_list(list, seq):
     return False
 
 
-def test_paper_graph1():
+def test_paper_graph1(writing=False):
     f = open("Files/graph1_paper.csv", "a")
     writer_csv = writer(f)
     gamma_list = np.arange(0, 6)
@@ -53,16 +86,24 @@ def test_paper_graph1():
         for q_0 in q_0_list:
             sum = 0
             for i in range(100):
-                optimizer = AntColonyOptimizer(ants=5, types=2, init_pheromones=0.05, beta=2, choose_best=q_0,
-                                               gamma=gamma, rho=0.1)
-                best = optimizer.fit(1, 20, verbose=False)
+                if i % 10 == 0:
+                    print(f"Iter {i} with gamma={gamma} and q0={q_0}")
+                ants, types, init_pheromones, beta, rho = 5, 2, 0.05, 2, 0.1
+                source, dest = 0, 3
+                t_max, cl_len = 20, 5
+                results = rust_macs.optimize_macs(graph1, ants, types, init_pheromones, beta, q_0, gamma, rho,
+                                                source, dest, t_max, cl_len, 0)
+                best = [i[0] for i in results]
                 if best == [[0, 2, 3], [0, 1, 3]] or best == [[0, 1, 3], [0, 2, 3]]:
                     sum += 1
-            print(sum)
-            writer_csv.writerow([gamma, q_0, sum])
+            if writing:
+                writer_csv.writerow([gamma, q_0, sum])
+            else:
+                print([gamma, q_0, sum])
+                input()
 
 
-def test_paper_graph_2_no_weight_method0():
+def test_paper_graph_2_no_weight_method0(writing=False):
     """
     Fonction pour les tests à reproduire sur le graph2 avec les deux bridges = 1. On utilise la première
     méthode de calcul pour la fonction objective.
@@ -74,17 +115,27 @@ def test_paper_graph_2_no_weight_method0():
     for nb_type in nb_types:
         nb_ants_bridge1 = 0
         for i in range(100):
-            optimizer = AntColonyOptimizer(ants=12, types=nb_type, init_pheromones=0.05, beta=2, choose_best=1,
-                                           gamma=2, rho=0.1)
-            best = optimizer.fit(2, 1000, verbose=False)
+            if i % 10 == 0:
+                print(f"Iteration {i} with {nb_type} types")
+            ants, types, init_pheromones, beta, rho = 12, nb_type, 0.05, 2, 0.1
+            source, dest = 0, 9
+            t_max, cl_len = 1000, 5
+            q_0, gamma = 1, 2
+            results = rust_macs.optimize_macs(graph2_no_weight, ants, types, init_pheromones, beta, q_0, gamma, rho,
+                                          source, dest, t_max, cl_len, 0)
+            best = [i[0] for i in results]
             for path in best:
                 if seq_in_list(path, bridge1):
                     nb_ants_bridge1 += 1
         percentage = nb_ants_bridge1 / nb_type
-        writer_csv.writerow([nb_type, percentage, 0])
+        if writing:
+            writer_csv.writerow([nb_type, percentage, 0])
+        else:
+            print([nb_type, percentage, 0])
+            input()
 
 
-def test_paper_graph_2_no_weight_method1():
+def test_paper_graph_2_no_weight_method1(writing=False):
     """
     Fonction pour les tests à reproduire sur le graph2 avec les deux bridges = 1. On utilise la deuxième
     méthode de calcul pour la fonction objective.
@@ -96,17 +147,27 @@ def test_paper_graph_2_no_weight_method1():
     for nb_type in nb_types:
         nb_ants_bridge1 = 0
         for i in range(100):
-            optimizer = AntColonyOptimizer(ants=12, types=nb_type, init_pheromones=0.05, beta=2, choose_best=1,
-                                           gamma=2, rho=0.1, method_score=1)
-            best = optimizer.fit(2, 1000, verbose=False)
+            if i % 10 == 0:
+                print(f"Iteration {i} with {nb_type} types")
+            ants, types, init_pheromones, beta, rho = 12, nb_type, 0.05, 2, 0.1
+            source, dest = 0, 9
+            t_max, cl_len = 1000, 5
+            q_0, gamma = 1, 2
+            results = rust_macs.optimize_macs(graph2_no_weight, ants, types, init_pheromones, beta, q_0, gamma, rho,
+                                          source, dest, t_max, cl_len, 1)
+            best = [i[0] for i in results]
             for path in best:
                 if seq_in_list(path, bridge1):
                     nb_ants_bridge1 += 1
         percentage = nb_ants_bridge1 / nb_type
-        writer_csv.writerow([nb_type, percentage, 1])
+        if writing:
+            writer_csv.writerow([nb_type, percentage, 1])
+        else:
+            print([nb_type, percentage, 1])
+            input()
 
 
-def test_paper_graph_2_weight_method0():
+def test_paper_graph_2_weight_method0(writing=False):
     """
     Fonction pour les tests à reproduire sur le graph2 avec les deux bridges qui ont des weights diff. On utilise la première
     méthode de calcul pour la fonction objective.
@@ -118,17 +179,28 @@ def test_paper_graph_2_weight_method0():
     for nb_type in nb_types:
         nb_ants_bridge1 = 0
         for i in range(100):
-            optimizer = AntColonyOptimizer(ants=12, types=nb_type, init_pheromones=0.05, beta=2, choose_best=1,
-                                           gamma=2, rho=0.1)
-            best = optimizer.fit(3, 1000, verbose=False)
+            if i % 10 == 0:
+                print(f"Method 0 : iteration {i} with {nb_type} types")
+            ants, types, init_pheromones, beta, rho = 12, nb_type, 0.05, 2, 0.1
+            source, dest = 0, 9
+            t_max, cl_len = 1000, 5
+            q_0, gamma = 1, 2
+            results = rust_macs.optimize_macs(graph2_weight, ants, types, init_pheromones, beta, q_0, gamma, rho,
+                                          source, dest, t_max, cl_len, 0)
+            best = [i[0] for i in results]
             for path in best:
                 if seq_in_list(path, bridge1):
                     nb_ants_bridge1 += 1
         percentage = nb_ants_bridge1 / nb_type
-        writer_csv.writerow([nb_type, percentage, 0])
+
+        if writing:
+            writer_csv.writerow([nb_type, percentage, 0])
+        else:
+            print([nb_type, percentage, 0])
+            input()
 
 
-def test_paper_graph_2_weight_method1():
+def test_paper_graph_2_weight_method1(writing=False):
     """
     Fonction pour les tests à reproduire sur le graph2 avec les deux bridges qui ont des weights diff. On utilise la deuxième
     méthode de calcul pour la fonction objective.
@@ -140,17 +212,27 @@ def test_paper_graph_2_weight_method1():
     for nb_type in nb_types:
         nb_ants_bridge1 = 0
         for i in range(100):
-            optimizer = AntColonyOptimizer(ants=12, types=nb_type, init_pheromones=0.05, beta=2, choose_best=1,
-                                           gamma=2, rho=0.1, method_score=1)
-            best = optimizer.fit(3, 1000, verbose=False)
+            if i % 10 == 0:
+                print(f"Method 1 : iteration {i} with {nb_type} types")
+            ants, types, init_pheromones, beta, rho = 12, nb_type, 0.05, 2, 0.1
+            source, dest = 0, 9
+            t_max, cl_len = 1000, 5
+            q_0, gamma = 1, 2
+            results = rust_macs.optimize_macs(graph2_weight, ants, types, init_pheromones, beta, q_0, gamma, rho,
+                                          source, dest, t_max, cl_len, 1)
+            best = [i[0] for i in results]
             for path in best:
                 if seq_in_list(path, bridge1):
                     nb_ants_bridge1 += 1
         percentage = nb_ants_bridge1 / nb_type
-        writer_csv.writerow([nb_type, percentage, 1])
+        if writing:
+            writer_csv.writerow([nb_type, percentage, 1])
+        else:
+            print([nb_type, percentage, 1])
+            input()
 
 
-def test_paper_graph3():
+def test_paper_graph3(writing=False):
     n_ants = 12
     gamma = 2
     dest = 15
@@ -164,6 +246,8 @@ def test_paper_graph3():
         for q_0 in q_0_list:
             min_length_per_run = []
             for i in range(100):
+                if i%10 == 0:
+                    print(f"Iter {i} with {nb_type} types and q0={q_0}")
                 result = rust_macs.optimize_macs(graph3, n_ants, nb_type, init_pheromones, beta, q_0, gamma, rho, source, dest, t_max, cl_len, disjoint_val_method)
                 result_paths = [i[0] for i in result]
                 result_lengths = [i[2] for i in result]
@@ -172,9 +256,14 @@ def test_paper_graph3():
             optimal_sol = min(min_length_per_run)
             perc_opt = min_length_per_run.count(optimal_sol)/len(min_length_per_run) #On compte combien de runs disjoints contiennent la meilleure solution
             coef_var = cv(min_length_per_run)
-            writer_csv.writerow([nb_type,q_0,optimal_sol,len(min_length_per_run),perc_opt,coef_var])
+            if writing:
+                writer_csv.writerow([nb_type,q_0,optimal_sol,len(min_length_per_run),perc_opt,coef_var])
+            else:
+                print([nb_type,q_0,optimal_sol,len(min_length_per_run),perc_opt,coef_var])
+                input()
 
-def test_paper_graph3_q0_varying():
+
+def test_paper_graph3_q0_varying(writing=False):
     n_ants = 12
     gamma = 2
     dest = 15
@@ -186,6 +275,8 @@ def test_paper_graph3_q0_varying():
     for nb_type in nb_types:
         min_length_per_run = []
         for i in range(100):
+            if i % 10 == 0:
+                print(f"Iter {i} with {nb_type} types")
             result = rust_macs.optimize_macs(graph3, n_ants, nb_type, init_pheromones, beta, 0.0, gamma, rho, source,
                                              dest, t_max, cl_len, disjoint_val_method, 0.1, 0.9)
             result_paths = [i[0] for i in result]
@@ -196,7 +287,11 @@ def test_paper_graph3_q0_varying():
         perc_opt = min_length_per_run.count(optimal_sol) / len(
             min_length_per_run)  # On compte combien de runs disjoints contiennent la meilleure solution
         coef_var = cv(min_length_per_run)
-        writer_csv.writerow([nb_type, "variation_of_q_0", optimal_sol, len(min_length_per_run), perc_opt, coef_var])
+        if writing:
+            writer_csv.writerow([nb_type, "variation_of_q_0", optimal_sol, len(min_length_per_run), perc_opt, coef_var])
+        else:
+            print([nb_type, "variation_of_q_0", optimal_sol, len(min_length_per_run), perc_opt, coef_var])
+            input()
 
 
 def check_disjoints(best):
@@ -316,5 +411,11 @@ def test_paper(num_graph):
 
 
 if __name__ == '__main__':
-    # test_paper_graph1()
-    test_barbell_modified()
+    test_paper_graph1(True)
+    test_paper_graph_2_no_weight_method0(True)
+    test_paper_graph_2_no_weight_method1(True)
+    test_paper_graph_2_weight_method0(True)
+    test_paper_graph_2_weight_method1(True)
+    test_paper_graph3_q0_varying(True)
+    test_paper_graph3(True)
+    # test_barbell_modified()
