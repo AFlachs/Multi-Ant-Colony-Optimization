@@ -1,0 +1,4 @@
+nb_types,q_0,optimal_length_min,perc_disjoint,perc_opt_min,varcoef_min,optimal_len_sum,perc_opt_sum,varcoef_sum
+2,variation_of_q_0,5.0,100,1.0,0.0,10.0,1.0,0.0
+3,variation_of_q_0,5.0,100,1.0,0.0,20.0,0.38,4.593519126314156
+4,variation_of_q_0,5.0,100,0.86,13.209662424991553,30.0,0.14,3.5835462845468338

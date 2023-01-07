@@ -238,13 +238,14 @@ def test_paper_graph3(writing=False):
     dest = 15
     t_max = 1000 # Tah Jul
     disjoint_val_method = 0
-    f = open("Files/graph3_paper.csv", "a")
+    f = open("Files/graph3_paper_eval_sum.csv", "a")
     writer_csv = writer(f)
     nb_types = [2, 3, 4]
     q_0_list = np.arange(0, 1, 0.1)
     for nb_type in nb_types:
         for q_0 in q_0_list:
             min_length_per_run = []
+            sum_len_per_run = []
             for i in range(100):
                 if i%10 == 0:
                     print(f"Iter {i} with {nb_type} types and q0={q_0}")
@@ -253,13 +254,20 @@ def test_paper_graph3(writing=False):
                 result_lengths = [i[2] for i in result]
                 if check_disjoints(result_paths):
                     min_length_per_run.append(min(result_lengths))
+                    sum_len_per_run.append((sum(result_lengths)))
             optimal_sol = min(min_length_per_run)
             perc_opt = min_length_per_run.count(optimal_sol)/len(min_length_per_run) #On compte combien de runs disjoints contiennent la meilleure solution
             coef_var = cv(min_length_per_run)
+
+            optimal_sum = min(sum_len_per_run)
+            perc_opt_sum = sum_len_per_run.count(optimal_sum) / len(sum_len_per_run)
+            cv_sum = cv(sum_len_per_run)
             if writing:
-                writer_csv.writerow([nb_type,q_0,optimal_sol,len(min_length_per_run),perc_opt,coef_var])
+                writer_csv.writerow([nb_type,q_0,optimal_sol,len(min_length_per_run),perc_opt,coef_var,
+                                     optimal_sum, perc_opt_sum, cv_sum])
             else:
-                print([nb_type,q_0,optimal_sol,len(min_length_per_run),perc_opt,coef_var])
+                print([nb_type, q_0, optimal_sol, len(min_length_per_run), perc_opt, coef_var,
+                       optimal_sum, perc_opt_sum, cv_sum])
                 input()
 
 
@@ -269,11 +277,12 @@ def test_paper_graph3_q0_varying(writing=False):
     dest = 15
     t_max = 1000  # Tah Jul
     disjoint_val_method = 0
-    f = open("Files/graph3_paper_q0_varying.csv", "a")
+    f = open("Files/graph3_paper_q0_varying_eval_sum.csv", "a")
     writer_csv = writer(f)
     nb_types = [2, 3, 4]
     for nb_type in nb_types:
         min_length_per_run = []
+        sum_len_per_run = []
         for i in range(100):
             if i % 10 == 0:
                 print(f"Iter {i} with {nb_type} types")
@@ -283,14 +292,22 @@ def test_paper_graph3_q0_varying(writing=False):
             result_lengths = [i[2] for i in result]
             if check_disjoints(result_paths):
                 min_length_per_run.append(min(result_lengths))
+                sum_len_per_run.append((sum(result_lengths)))
         optimal_sol = min(min_length_per_run)
         perc_opt = min_length_per_run.count(optimal_sol) / len(
             min_length_per_run)  # On compte combien de runs disjoints contiennent la meilleure solution
         coef_var = cv(min_length_per_run)
+
+        optimal_sum = min(sum_len_per_run)
+        perc_opt_sum = sum_len_per_run.count(optimal_sum) / len(sum_len_per_run)
+        cv_sum = cv(sum_len_per_run)
+
         if writing:
-            writer_csv.writerow([nb_type, "variation_of_q_0", optimal_sol, len(min_length_per_run), perc_opt, coef_var])
+            writer_csv.writerow([nb_type, "variation_of_q_0", optimal_sol, len(min_length_per_run), perc_opt, coef_var,
+                                                              optimal_sum, perc_opt_sum, cv_sum])
         else:
-            print([nb_type, "variation_of_q_0", optimal_sol, len(min_length_per_run), perc_opt, coef_var])
+            print([nb_type, "variation_of_q_0", optimal_sol, len(min_length_per_run), perc_opt, coef_var,
+                                                              optimal_sum, perc_opt_sum, cv_sum])
             input()
 
 
@@ -303,8 +320,6 @@ def check_disjoints(best):
                 if seq_in_list(path, seq):
                     return False
     return True
-
-
 
 
 def test_barbell_modified(numtest,adv=True,verbose=True, use_rust_macs=True):
@@ -392,8 +407,6 @@ def test_barbell_modified(numtest,adv=True,verbose=True, use_rust_macs=True):
     f.close()
     tac = time.perf_counter()
     print(f"Barbell took {tac - tic:0.1f} seconds to run.")
-
-
 
 
 def test_small_world():
@@ -533,25 +546,23 @@ if __name__ == '__main__':
     #test_barbell_modified(0,adv=True,verbose=False)#ok
     #test_barbell_modified(2,adv=True,verbose=False)#ok
     #test_barbell_modified(3,adv=True,verbose=False)#TODO
-    test_barbell_modified(4,adv=True,verbose=False)#TODO
+    # test_barbell_modified(4,adv=True,verbose=False)#TODO
 
     #test_scale_free(0,adv=True,verbose=False)#ok
     #test_scale_free(1,adv=True,verbose=False)#TODO
     
-    """
-    print("Testing graph 1")
-    test_paper_graph1(True)
-    print("Testing graph 2 no weight 0")
-    test_paper_graph_2_no_weight_method0(True)
-    print("Testing graph 2 no weight 1")
-    test_paper_graph_2_no_weight_method1(True)
-    print("Testing graph 2 weight 0")
-    test_paper_graph_2_weight_method0(True)
-    print("Testing graph 2 weight 1")
-    test_paper_graph_2_weight_method1(True)
-    print("Testing graph 3 q0 varies")
-    test_paper_graph3_q0_varying(True)
-    print("Testing graph 3 q0 fixed")
+    # print("Testing graph 1")
+    # test_paper_graph1(True)
+    # print("Testing graph 2 no weight 0")
+    # test_paper_graph_2_no_weight_method0(True)
+    # print("Testing graph 2 no weight 1")
+    # test_paper_graph_2_no_weight_method1(True)
+    # print("Testing graph 2 weight 0")
+    # test_paper_graph_2_weight_method0(True)
+    # print("Testing graph 2 weight 1")
+    # test_paper_graph_2_weight_method1(True)
+    # print("Testing graph 3 q0 varies")
+    # test_paper_graph3_q0_varying(True)
+    # print("Testing graph 3 q0 fixed")
     test_paper_graph3(True)
     # test_barbell_modified()
-    """

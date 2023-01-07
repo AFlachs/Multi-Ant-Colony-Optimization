@@ -1,4 +1,4 @@
 networkx
 matplotlib
 numpy
-rust_macs
+rust_macs==0.3.7
