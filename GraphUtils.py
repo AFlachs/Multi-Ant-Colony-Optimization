@@ -16,29 +16,31 @@ def mat_to_graph(matrix : np.ndarray) -> nx.Graph:
     tmp[(tmp==np.inf)]=0
     return nx.from_numpy_array(tmp)
 
-def graph_to_mat(graph : nx.Graph,with_inf_val=True) -> np.ndarray:
+def graph_to_mat(graph : nx.Graph,with_inf_val=False) -> np.ndarray:
     """
     
     """
-    mat = nx.to_numpy_array(graph)
+    mat = np.copy(nx.to_numpy_array(graph))
     if with_inf_val:
         for i in range(len(mat)):
             for j in range(i+1,len(mat)):
                 if mat[i][j]==0:
                     mat[i][j],mat[j][i]=np.inf,np.inf
-    return mat    
+    return mat
 
 ### UTILS functions checking some properties of a graph
-def get_min_cut_from_mat(matrix : np.ndarray) -> tuple:
+def get_min_cut_from_mat(matrix : np.ndarray,src=None,dst=None) -> tuple:
     """
     Return the minimum cut of a graph given its adjacency matrix.
 
     :param matrix: adjacency matrix representing the graph.
     :return: tuple composed of (the cut value, pair of 2 sets representing the partition).
     """
-    start, end = 0, len(matrix)-1
+    if src==None : src=0
+    if dst==None : dst=len(matrix)-1
+
     G = mat_to_graph(matrix)
-    return nx.minimum_cut(G,start,end,capacity='weight')
+    return nx.minimum_cut(G,src,dst,capacity='weight')
 
 def get_edges_from_min_cut(matrix : np.ndarray) -> np.ndarray:
     G=mat_to_graph(matrix)
@@ -50,9 +52,12 @@ def get_edges_from_min_cut(matrix : np.ndarray) -> np.ndarray:
         res[i,1]=e[1]#edge, arrival side
     return res
 
-def get_all_disjoint_paths(matrix : np.ndarray) -> list :
+def get_all_disjoint_paths(matrix : np.ndarray,src=None,dst=None) -> list :
+    if src==None : src=0
+    if dst==None : dst=len(matrix)-1
+
     G=mat_to_graph(matrix)
-    return list(nx.edge_disjoint_paths(G,0,len(matrix)-1))
+    return list(nx.edge_disjoint_paths(G,src,dst))
 
 def get_min_disjoint_path(matrix : np.ndarray,ret_subsets=False) -> int:
     """
@@ -73,7 +78,7 @@ def get_min_disjoint_path(matrix : np.ndarray,ret_subsets=False) -> int:
     else:
         return int(C[0]) #first element is the value of the cut (here, in a graph with all edge labelled with 0) 
 
-def exist_shortest_path(matrix : np.ndarray) -> bool:
+def exist_shortest_path(matrix : np.ndarray,src=None, dst=None) -> bool:
     """
     Return a boolean indicating if a shortest path exists, given an adjacency matrix,
     between the starting node (0 by default) and an ending node (last one by default) 
@@ -81,8 +86,10 @@ def exist_shortest_path(matrix : np.ndarray) -> bool:
     :param matrix: adjacency matrix representing the graph.
     :return: True if a shortest path is found, False otherwise. 
     """
+    if src==None : src=0
+    if dst==None : dst=len(matrix)-1
     G=mat_to_graph(matrix)
-    return nx.has_path(G,0,len(matrix)-1)
+    return nx.has_path(G,src,dst)
 
 ### DISPLAY functions (uses matplotlib.pyplot)
 def display_from_mat(matrix : np.ndarray, cut=False) -> None:
@@ -123,8 +130,7 @@ def display_from_graph(graph,cut=False) -> None:
     nx.draw(graph, pos, with_labels=True, font_weight='bold')
     nx.draw_networkx_edge_labels(graph, pos, edge_labels=labels)
     plt.show()
-    if cut:
-        raise(NotImplementedError)
+
 
 
 ### FACTORIES (using some functions of networkx)
@@ -142,9 +148,19 @@ def GraphFactory_barabasi_albert(N : int, M : int,resample=True,ret_type='mat') 
     if resample:
         # resample labels to allow 'random' definition of start & end nodes when taking 1st & last in array.
         map = dict(zip(G.nodes(), sorted(G.nodes(), key=lambda k: np.random.random())))
-        G = nx.relabel_nodes(G, map)
+        Gnew = nx.relabel_nodes(G, map).copy()
+        Gret=nx.Graph()
+        Gret.add_nodes_from(sorted(Gnew.nodes(data=True)))
+        Gret.add_edges_from(Gnew.edges(data=True))
         # 2 previous  lines from https://stackoverflow.com/questions/59739750/how-can-i-randomly-permute-the-nodes-of-a-graph-with-python-in-networkx
-    return G
+        if ret_type=='mat':
+            return graph_to_mat(Gret)
+        else:
+            return Gret
+    if ret_type=='mat':
+        return graph_to_mat(G)
+    else:
+        return G
 
 def GraphFactory_erdos_renyi(N : int) -> nx.Graph | np.ndarray:
     #TODO: docstring, multiple type return.
@@ -163,7 +179,7 @@ def GraphFactory_watts_strogatz(N=12,K=4,P=0.0, ret_type='mat') -> nx.Graph | np
     else:
         raise TypeError("ERROR : 'ret_type' parameter in 'GraphFactory_watts_strogatz' should be either equal to 'mat' or 'graph'.")
 
-def GraphFactory_barbell(N_nodes : int, N_links = 1, ret_type='mat') -> nx.Graph | np.ndarray:
+def GraphFactory_barbell(N_nodes : int, N_links = 1, ret_type='mat', with_inf_val=False) -> nx.Graph | np.ndarray:
     """
     Generate a barbell graph with 'N_nodes' divided in 2 cliques (of 'N_nodes//2' nodes), and with 'N_links' between those 2 cliques. 
 
@@ -190,7 +206,7 @@ def GraphFactory_barbell(N_nodes : int, N_links = 1, ret_type='mat') -> nx.Graph
         raise TypeError("Something happened in barbell factory...")
     
     if ret_type=='mat':
-        return graph_to_mat(G)
+        return graph_to_mat(G,with_inf_val=with_inf_val)
     elif ret_type=='graph':
         return G
     else:
